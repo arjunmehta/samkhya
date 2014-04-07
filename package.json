@@ -1,5 +1,5 @@
 {
-  "name": "paramparam",
+  "name": "samsaara",
   "version": "0.0.1",
   "description": "A comprehensive module to create, maintain and manage active socket connections.",
   "keywords": [
@@ -15,7 +15,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/arjunmehta/XXXX.git"
+    "url": "https://github.com/arjunmehta/node-samsaara.git"
   },
   "dependencies": {
     "sockjs": "0.3.7"
@@ -33,8 +33,8 @@
   "readme": "",
   "readmeFilename": "Readme.md",
   "bugs": {
-    "url": "https://github.com/arjunmehta/paramparam.js/issues"
+    "url": "https://github.com/arjunmehta/node-samsaara/issues"
   },
-  "_id": "paramparam@0.0.1",
-  "_from": "paramparam@"
+  "_id": "samsaara@0.0.1",
+  "_from": "samsaara@"
 }
