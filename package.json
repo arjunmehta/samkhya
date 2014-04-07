@@ -1,0 +1,40 @@
+{
+  "name": "samsara",
+  "version": "0.0.1",
+  "description": "A comprehensive module to create, maintain and manage active socket connections.",
+  "keywords": [
+    "sockjs",
+    "now",
+    "connections",
+    "referencing",
+    "everyone"
+  ],
+  "author": {
+    "name": "Arjun Mehta",
+    "email": "arjun@newlief.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/arjunmehta/XXXX.git"
+  },
+  "dependencies": {
+    "sockjs": "0.3.7"
+  },
+  "devDependencies": {
+    "should": ">= 0.0.1"
+  },
+  "scripts": {
+    "test": "make test"
+  },
+  "main": "index",
+  "engines": {
+    "node": ">= 0.6.x"
+  },
+  "readme": "",
+  "readmeFilename": "Readme.md",
+  "bugs": {
+    "url": "https://github.com/arjunmehta/samsara.js/issues"
+  },
+  "_id": "samsara@0.0.1",
+  "_from": "samsara@"
+}
