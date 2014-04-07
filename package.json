@@ -1,5 +1,5 @@
 {
-  "name": "samsara",
+  "name": "paramparam",
   "version": "0.0.1",
   "description": "A comprehensive module to create, maintain and manage active socket connections.",
   "keywords": [
@@ -33,8 +33,8 @@
   "readme": "",
   "readmeFilename": "Readme.md",
   "bugs": {
-    "url": "https://github.com/arjunmehta/samsara.js/issues"
+    "url": "https://github.com/arjunmehta/paramparam.js/issues"
   },
-  "_id": "samsara@0.0.1",
-  "_from": "samsara@"
+  "_id": "paramparam@0.0.1",
+  "_from": "paramparam@"
 }
