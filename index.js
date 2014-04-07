@@ -1,5 +1,5 @@
 /*!
- * argyleSocks
+ * Samsaara
  * Copyright(c) 2013 Arjun Mehta <arjun@newlief.com>
  * MIT Licensed
  */
@@ -14,12 +14,12 @@ var config = require('./lib/config.js');
 
 var self;
 
-exports = module.exports = new Argyle();
+exports = module.exports = new Samsaara();
 
 
 
 //ROOT ARGYLE OBJECT////////////////////////////////////////////////////////////////////////////
-function Argyle(){
+function Samsaara(){
 
   self = this;
   
@@ -111,7 +111,7 @@ function Argyle(){
 
   this.expose({
     switchContext: this.contextController.switchContext
-  }, "argyle");
+  }, "samsaara");
     
 }
 
@@ -121,14 +121,14 @@ function Argyle(){
 
 
 //EVENTEMITTER PROTOTYPE
-// Argyle.prototype.__proto__ = EventEmitter.prototype;
-Argyle.prototype.__proto__ = EventEmitter.prototype;
+// Samsaara.prototype.__proto__ = EventEmitter.prototype;
+Samsaara.prototype.__proto__ = EventEmitter.prototype;
 
 
 
 
 //MAIN CONTROLLER FUNCTION////////////////////////////////////////////////////////////////////////////
-Argyle.prototype.initialize = function (server, opts){
+Samsaara.prototype.initialize = function (server, opts){
 
   var sockjsOpts = { _pathTo: "/echo" };
 
