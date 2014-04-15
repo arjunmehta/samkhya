@@ -29,25 +29,6 @@ function Samsaara(){
     pathTo: "/echo"
   };
 
-
-  this.whateverTestFunction = function(argA, argB, callBack){
-
-    console.log("////////////////////////EXECUTING TEXT FUNCTION");
-    console.log("////////////////////////EXECUTING TEXT FUNCTION");
-    console.log("////////////////////////EXECUTING TEXT FUNCTION");
-    console.log("////////////////////////EXECUTING TEXT FUNCTION");
-    console.log("////////////////////////EXECUTING TEXT FUNCTION");
-    console.log("////////////////////////EXECUTING TEXT FUNCTION");
-    console.log("argA:", argA);
-    console.log("argB:", argB);
-    argB.push("A NEW ONEEEEE");
-    argB.push(null);
-    argB.push({aString: "aljkhakja", anArray: ["ajkhakha"]});
-    if(callBack && typeof callBack == "function") callBack(argA, argB);
-
-  };
-
-
   this.sockjsServer = sockjs.createServer();
 
   // require and initialize connection controller
@@ -94,10 +75,12 @@ function Samsaara(){
     expose: this.grouping.expose,
     exposeNamespace: this.grouping.exposeNamespace
   };
+
   for(var func in bringToMain){
     this[func] = bringToMain[func];
   }
 
+  // Initialize Models
   this.Context.initialize(this);
   this.Connection.initialize(this);
 
@@ -166,6 +149,17 @@ Samsaara.prototype.initialize = function (server, opts){
     if(opts.couchStore){
       require('./lib/database.js')(this, opts.usersDB, opts.contextsDB);
     }
+
+    if(opts.app){
+      opts.app.get('/samsaara/samsaara.js', function (req, res){
+        res.sendfile(__dirname + '/client/samsaara.js');
+      });
+      opts.app.get('/samsaara/sockjs.js', function (req, res){
+        res.sendfile(__dirname + '/client/sockjs-0.3.min.js');
+      });
+
+    }
+
   }
 
   self.sockjsServer.installHandlers( server, { prefix: sockjsOpts._pathTo } );

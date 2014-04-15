@@ -18,7 +18,9 @@
     "url": "https://github.com/arjunmehta/node-samsaara.git"
   },
   "dependencies": {
-    "sockjs": "0.3.7"
+    "sockjs": "0.3.7",
+    "winston": "*",
+    "colors": "*"
   },
   "devDependencies": {
     "should": ">= 0.0.2"
