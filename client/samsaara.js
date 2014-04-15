@@ -156,7 +156,9 @@ var Samsaara = function (opts){
     if (navigator.geolocation){
       navigator.geolocation.getCurrentPosition(function (position){
         self.navInfo.geoposition = position;
-        if(callBack && typeof callBack === "function") callBack(self.navInfo.geoposition);
+        if(callBack && typeof callBack === "function") callBack(null, self.navInfo.geoposition);
+      }, function(err){
+        if(callBack && typeof callBack === "function") callBack(err, null);
       });
     }
   };
