@@ -1,6 +1,6 @@
 {
   "name": "samsaara",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "A comprehensive module to create, maintain and manage active socket connections.",
   "keywords": [
     "sockjs",
@@ -21,7 +21,7 @@
     "sockjs": "0.3.7"
   },
   "devDependencies": {
-    "should": ">= 0.0.1"
+    "should": ">= 0.0.2"
   },
   "scripts": {
     "test": "make test"
@@ -35,6 +35,6 @@
   "bugs": {
     "url": "https://github.com/arjunmehta/node-samsaara/issues"
   },
-  "_id": "samsaara@0.0.1",
+  "_id": "samsaara@0.0.2",
   "_from": "samsaara@"
 }

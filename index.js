@@ -42,7 +42,7 @@ function Samsaara(){
     console.log("argB:", argB);
     argB.push("A NEW ONEEEEE");
     argB.push(null);
-    argB.push({gwenda: "aljkhakja", anArray: ["ajkhakha"]});
+    argB.push({aString: "aljkhakja", anArray: ["ajkhakha"]});
     if(callBack && typeof callBack == "function") callBack(argA, argB);
 
   };
