@@ -36,8 +36,8 @@ var Samsaara = function (opts){
   }
 
   this.callItBack = function(id, owner, args){
-    console.log("CALL IT BACK", id, owner, args);
-    console.log("CALL IT BACK", incomingCallBacks);
+    // console.log("CALL IT BACK", id, owner, args);
+    // console.log("CALL IT BACK", incomingCallBacks);
     incomingCallBacks[id].callBack.apply(incomingCallBacks[id].from, args);
     delete incomingCallBacks[id];
   };
@@ -332,8 +332,6 @@ Samsaara.prototype.updateToken = function(oldToken, newToken, callBack){
   }
 };
 
-
-
 Samsaara.prototype.extendAsEventDispatcher = function(){
   if (this._listeners == null){
     this._listeners = [];
@@ -351,6 +349,7 @@ Samsaara.prototype.extendAsEventDispatcher = function(){
       }
     };
   }
+
   if (typeof(this.addEventListener) == "undefined"){
     this.addEventListener = function (type, callback, capture){
       // no dupes
@@ -362,16 +361,13 @@ Samsaara.prototype.extendAsEventDispatcher = function(){
           break;
         }
       }
+
       if (!declared){
         this._listeners.push({'type':type,'callback':callback,'capture':capture});
       }
     };
   }
 };
-
-
-
-
 
 
 //SUPPORTING FUNCTIONS////////////////////////////////////////////////////////////////////////////

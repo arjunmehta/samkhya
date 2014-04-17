@@ -54,9 +54,11 @@ function Samsaara(){
   var bringToMain = {
     connections: this.connectionController.connections,
     sendTo: this.communication.sendTo,
+    sendToGroup: this.communication.sendToGroup,
 
     contexts: this.contextController.contexts,
     openContext: this.contextController.openContext,
+    openContextWithData: this.contextController.openContextWithData,
     isContextOpen: this.contextController.isContextOpen,
     addToForeignContext: this.contextController.addToForeignContext,
     switchContext: this.contextController.switchContext,
@@ -65,6 +67,7 @@ function Samsaara(){
     clearFromContext: this.contextController.clearFromContext,
 
     Context: this.contextController.Context,
+    Access: this.contextController.Access,
     Connection: this.connectionController.Connection,
 
     groups: this.grouping.groups,

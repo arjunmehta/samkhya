@@ -53,7 +53,7 @@ Context.prototype.sendTo = function(groupName, message, callBack){
 Context.prototype.addGroup = function(groupName){
   if(!this.groups[groupName]){
     this.groups[groupName] = {};
-  }  
+  }
 };
 
 Context.prototype.addToGroup = function(connID, groupName){
