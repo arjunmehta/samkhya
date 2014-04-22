@@ -143,6 +143,8 @@ Samsaara.prototype.initialize = function (server, opts){
 
       this.comStore.initialize(this, this.pub, this.sub, this.client);
 
+      this.contextController.setRedisStore(true);
+
     }
     else{
       this.comStore = require('./lib/communication-memory.js');

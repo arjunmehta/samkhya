@@ -7,6 +7,9 @@
 var helper = require('../lib/helper.js');
 var crypto = require('crypto');
 
+var contextController = require('../lib/contextController.js');
+var contexts = contextController.contexts;
+
 exports = module.exports = SymbolicConnection;
 var redisPub;
 
@@ -29,3 +32,12 @@ SymbolicConnection.prototype.write = function(message){
   console.log(process.pid.toString(), "SYMBOLIC write on", "SYMBOLIC CONNECTION PUBLISHING: Owner:", this.owner, this.nativeID);
   redisPub.publish(this.nativeID, message);
 };
+
+Object.defineProperty(SymbolicConnection.prototype, 'currentContext', {
+    get: function() {
+        return contexts[this.context];
+    },
+    set: function(context) {
+        this.context = context.contextID;
+    }
+});

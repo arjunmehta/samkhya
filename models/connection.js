@@ -12,6 +12,9 @@ var log = require("../lib/log.js");
 var moduleName = path.basename(module.filename);
 var argyle;
 
+var contextController = require('../lib/contextController.js');
+var contexts = contextController.contexts;
+
 exports = module.exports = Connection;
 
 exports.initialize = function(parent){
@@ -72,6 +75,24 @@ Connection.prototype.write = function(message){
   console.log(process.pid.toString(), "NATIVE write on", "NATIVE CONNECTION WRITING");
   this.conn.write(message);
 };
+
+// Connection.prototype.currentContext = {
+//     getValue: function(){
+//         return contexts[this.context];
+//     },
+//     setValue: function(val){
+//         this.context = val.contextID;
+//     }
+// };
+
+Object.defineProperty(Connection.prototype, 'currentContext', {
+    get: function() {
+        return contexts[this.context];
+    },
+    set: function(context) {
+        this.context = context.contextID;
+    }
+});
 
 
 Connection.prototype.receive = function(messageObj){

@@ -36,8 +36,8 @@ var Samsaara = function (opts){
   }
 
   this.callItBack = function(id, owner, args){
-    // console.log("CALL IT BACK", id, owner, args);
-    // console.log("CALL IT BACK", incomingCallBacks);
+    console.log("CALL IT BACK", id, owner, args);
+    console.log("CALL IT BACK", incomingCallBacks);
     incomingCallBacks[id].callBack.apply(incomingCallBacks[id].from, args);
     delete incomingCallBacks[id];
   };
