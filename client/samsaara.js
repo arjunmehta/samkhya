@@ -213,8 +213,9 @@ var Samsaara = function (opts){
 
         console.log("*******************ATTEMPTING TO LOG IN SESSION");
 
-        self.send({func: "requestLoginToken"}, function (err, registrationToken){
-          httpGet("/registerSamsaaraConnection?regtoken=" + registrationToken, function (sessionInfo){            
+        self.send({func: "requestRegistrationToken"}, function (err, registrationToken){
+          httpGet("/registerSamsaaraConnection?regtoken=" + registrationToken, function (sessionInfo){   
+          console.log("SESSION INFO", sessionInfo);         
             if(sessionInfo.err === undefined){
               self.navInfo.sessionInfo = {sessionID: sessionInfo.sessionID, userID: sessionInfo.userID};
               self.sockjs.send( JSON.stringify( { login: [registrationToken, sessionInfo] } ));
@@ -328,6 +329,9 @@ Samsaara.prototype.samsaaraInitialized = function(whichOne, callBack){
 };
 
 Samsaara.prototype.updateToken = function(oldToken, newToken, callBack){
+
+  console.log("UPDATING TOKEN", oldToken, newToken);
+
   if(self.samsaaraToken == oldToken){
     self.samsaaraToken = newToken;
     if(callBack && typeof callBack === "function") callBack(newToken);

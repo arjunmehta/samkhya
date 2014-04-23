@@ -65,7 +65,8 @@ function Samsaara(){
     linkContext: this.contextController.linkContext,
     addToLocalContext: this.contextController.addToLocalContext,
     clearFromContext: this.contextController.clearFromContext,
-    
+
+    addUserSession: this.authentication.addUserSession,
     removeUserSession: this.authentication.removeUserSession,
 
     Context: this.contextController.Context,
@@ -93,7 +94,7 @@ function Samsaara(){
     windowResize: this.connectionController.windowResize,
     geoPosition: this.connectionController.geoPosition,
     callItBack: this.communication.callItBack,
-    requestLoginToken: this.authentication.requestLoginToken,
+    requestRegistrationToken: this.authentication.requestRegistrationToken,
     whateverTestFunction: this.whateverTestFunction
   });
 
@@ -146,6 +147,7 @@ Samsaara.prototype.initialize = function (server, app, opts){
       this.comStore.initialize(this, this.pub, this.sub, this.client);
 
       this.contextController.setRedisStore(true);
+      this.authentication.setRedisStore(true);
 
     }
     else{
@@ -162,6 +164,7 @@ Samsaara.prototype.initialize = function (server, app, opts){
       app.get('/samsaara/samsaara.js', function (req, res){
         res.sendfile(__dirname + '/client/samsaara.js');
       });
+
       app.get('/samsaara/sockjs.js', function (req, res){
         res.sendfile(__dirname + '/client/sockjs-0.3.min.js');
       });
@@ -175,8 +178,10 @@ Samsaara.prototype.initialize = function (server, app, opts){
         self.authentication.retrieveRegistrationToken(registrationToken, function (err, reply){
           if(!err){
             // Can this somehow be supplied by the developer?
-            self.authentication.getRequestSessionInfo(req, function (sessionID, userID){
-              res.send({ sessionID: sessionID, userID: userID, tokenKey: reply });
+            self.authentication.getRequestSessionInfo(req.sessionID, function (sessionID, userID){              
+              var keyObject = { sessionID: sessionID, userID: userID, tokenKey: reply };
+              console.log(keyObject);
+              res.send(keyObject);
             });
           }
           else{
