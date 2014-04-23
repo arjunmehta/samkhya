@@ -31,10 +31,10 @@ function User(userName, userID, email, passwordHash){
 
 User.prototype.addConnection = function (whichOne){
   this.openConnections[whichOne.id] = true;
-}
+};
 
 User.prototype.removeConnection = function (whichOne){
   if(this.openConnections[whichOne.id]){
     delete this.openConnections[whichOne.id];
   }
-}
+};

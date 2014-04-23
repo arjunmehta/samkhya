@@ -65,6 +65,8 @@ function Samsaara(){
     linkContext: this.contextController.linkContext,
     addToLocalContext: this.contextController.addToLocalContext,
     clearFromContext: this.contextController.clearFromContext,
+    
+    removeUserSession: this.authentication.removeUserSession,
 
     Context: this.contextController.Context,
     Access: this.contextController.Access,
@@ -114,7 +116,7 @@ Samsaara.prototype.__proto__ = EventEmitter.prototype;
 
 
 //MAIN CONTROLLER FUNCTION////////////////////////////////////////////////////////////////////////////
-Samsaara.prototype.initialize = function (server, opts){
+Samsaara.prototype.initialize = function (server, app, opts){
 
   var sockjsOpts = { _pathTo: "/echo" };
 
@@ -155,16 +157,37 @@ Samsaara.prototype.initialize = function (server, opts){
       require('./lib/database.js')(this, opts.usersDB, opts.contextsDB);
     }
 
-    if(opts.app){
-      opts.app.get('/samsaara/samsaara.js', function (req, res){
+    if(app){
+
+      app.get('/samsaara/samsaara.js', function (req, res){
         res.sendfile(__dirname + '/client/samsaara.js');
       });
-      opts.app.get('/samsaara/sockjs.js', function (req, res){
+      app.get('/samsaara/sockjs.js', function (req, res){
         res.sendfile(__dirname + '/client/sockjs-0.3.min.js');
       });
 
-    }
+      app.get('/registerSamsaaraConnection', function (req, res) {
 
+        var registrationToken = req.query.regtoken;
+
+        console.log("REGISTER CONNECTION ROUTE:", registrationToken);
+
+        self.authentication.retrieveRegistrationToken(registrationToken, function (err, reply){
+          if(!err){
+            // Can this somehow be supplied by the developer?
+            self.authentication.getRequestSessionInfo(req, function (sessionID, userID){
+              res.send({ sessionID: sessionID, userID: userID, tokenKey: reply });
+            });
+          }
+          else{
+            res.send({ err: err });
+          }
+        });
+      });
+    }
+    else{
+      throw "You must provide an Express app object so Samsaara can attach its authentication route";
+    }
   }
 
   self.sockjsServer.installHandlers( server, { prefix: sockjsOpts._pathTo } );

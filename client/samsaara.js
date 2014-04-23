@@ -36,8 +36,8 @@ var Samsaara = function (opts){
   }
 
   this.callItBack = function(id, owner, args){
-    console.log("CALL IT BACK", id, owner, args);
-    console.log("CALL IT BACK", incomingCallBacks);
+    // console.log("CALL IT BACK", id, owner, args);
+    // console.log("CALL IT BACK", incomingCallBacks);
     incomingCallBacks[id].callBack.apply(incomingCallBacks[id].from, args);
     delete incomingCallBacks[id];
   };
@@ -214,9 +214,11 @@ var Samsaara = function (opts){
         console.log("*******************ATTEMPTING TO LOG IN SESSION");
 
         self.send({func: "requestLoginToken"}, function (err, registrationToken){
-          httpGet("/registerConnection?regtoken=" + registrationToken, function (sessionInfo){
-            self.navInfo.sessionInfo = sessionInfo;
-            self.sockjs.send( JSON.stringify( { login: [registrationToken, sessionInfo] } ));
+          httpGet("/registerSamsaaraConnection?regtoken=" + registrationToken, function (sessionInfo){            
+            if(sessionInfo.err === undefined){
+              self.navInfo.sessionInfo = {sessionID: sessionInfo.sessionID, userID: sessionInfo.userID};
+              self.sockjs.send( JSON.stringify( { login: [registrationToken, sessionInfo] } ));
+            }
           });
         });
       }
