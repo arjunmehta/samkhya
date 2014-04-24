@@ -1,12 +1,12 @@
 /*!
- * argyleSocks - Context Constructor
+ * samsaaraSocks - Context Constructor
  * Copyright(c) 2013 Arjun Mehta <arjun@newlief.com>
  * MIT Licensed
  */
 
 
 var helper = require('../lib/helper.js');
-var argyle;
+var samsaara;
 
 exports = module.exports = Context;
 
@@ -22,7 +22,7 @@ Context.prototype = {
 };
 
 exports.initialize = function(parent){
-  argyle = parent;
+  samsaara = parent;
 };
 
 Context.prototype.assignID = function(contextID){
@@ -47,7 +47,7 @@ Context.prototype.resetPermissions = function(permissions){
 
 Context.prototype.sendTo = function(groupName, message, callBack){
   var group = this.groups[groupName];
-  argyle.sendTo(group, message, callBack);
+  samsaara.sendTo(group, message, callBack);
 };
 
 Context.prototype.addGroup = function(groupName){
@@ -76,7 +76,7 @@ Context.prototype.removeConnection = function(connID){
     }
   }
 
-  argyle.emit("clearedFromContext", argyle.connections[connID], this.contextID);
+  samsaara.emit("clearedFromContext", samsaara.connections[connID], this.contextID);
 };
 
 

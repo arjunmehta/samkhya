@@ -16,7 +16,7 @@ var self;
 
 exports = module.exports = new Samsaara();
 
-
+var getClassOf = Function.prototype.call.bind(Object.prototype.toString);
 
 //ROOT ARGYLE OBJECT////////////////////////////////////////////////////////////////////////////
 function Samsaara(){
@@ -60,10 +60,8 @@ function Samsaara(){
     openContext: this.contextController.openContext,
     openContextWithData: this.contextController.openContextWithData,
     isContextOpen: this.contextController.isContextOpen,
-    addToForeignContext: this.contextController.addToForeignContext,
     switchContext: this.contextController.switchContext,
     linkContext: this.contextController.linkContext,
-    addToLocalContext: this.contextController.addToLocalContext,
     clearFromContext: this.contextController.clearFromContext,
 
     addUserSession: this.authentication.addUserSession,
@@ -94,8 +92,7 @@ function Samsaara(){
     windowResize: this.connectionController.windowResize,
     geoPosition: this.connectionController.geoPosition,
     callItBack: this.communication.callItBack,
-    requestRegistrationToken: this.authentication.requestRegistrationToken,
-    whateverTestFunction: this.whateverTestFunction
+    requestRegistrationToken: this.authentication.requestRegistrationToken
   });
 
   this.expose({
@@ -109,8 +106,7 @@ function Samsaara(){
 
 
 
-//EVENTEMITTER PROTOTYPE
-// Samsaara.prototype.__proto__ = EventEmitter.prototype;
+//EVENT EMITTER PROTOTYPE
 Samsaara.prototype.__proto__ = EventEmitter.prototype;
 
 
@@ -133,15 +129,15 @@ Samsaara.prototype.initialize = function (server, app, opts){
       this.comStore = require('./lib/communication-redis.js');
       log.info("setting opts.redisStore");
 
-      // initialize a pubsub client and a regular client
-      if(opts.redisPub){
+      // console.log("REDIS CLASS:", opts.redisPub.constructor.name, getClassOf(opts.redisSub),getClassOf(opts.redisClient));
+
+      if(opts.redisPub && opts.redisSub && opts.redisClient){
         this.pub = opts.redisPub;
-      }
-      if(opts.redisSub){
         this.sub = opts.redisSub;
-      }
-      if(opts.redisClient){
         this.client = opts.redisClient;
+      }
+      else{
+        throw "RedisClient for redisPub, redisSub and redisClient must be provided in order for samsaara to work using Redis.";
       }
 
       this.comStore.initialize(this, this.pub, this.sub, this.client);
@@ -159,10 +155,6 @@ Samsaara.prototype.initialize = function (server, app, opts){
       this[func] = this.authentication.exported[func];
     }
 
-    if(opts.couchStore){
-      require('./lib/database.js')(this, opts.usersDB, opts.contextsDB);
-    }
-
     if(app){
 
       app.get('/samsaara/samsaara.js', function (req, res){
@@ -173,12 +165,16 @@ Samsaara.prototype.initialize = function (server, app, opts){
         res.sendfile(__dirname + '/client/sockjs-0.3.min.js');
       });
 
+      app.get('/samsaara/ee.js', function (req, res){
+        res.sendfile(__dirname + '/client/EventEmitter.min.js');
+      });
+
       app.get('/registerSamsaaraConnection', function (req, res) {
 
         var registrationToken = req.query.regtoken;
 
         self.authentication.retrieveRegistrationToken(registrationToken, function (err, reply){
-          if(!err){
+          if(err === null){
             // Can this somehow be supplied by the developer?
             self.authentication.getRequestSessionInfo(req.sessionID, function (sessionID, userID){              
               var keyObject = { sessionID: sessionID, userID: userID, tokenKey: reply };

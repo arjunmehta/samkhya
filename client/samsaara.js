@@ -1,16 +1,13 @@
-var self;
 
 var Samsaara = function (opts){
 
-  self = this;
+  var self = this;
 
-  this.extendAsEventDispatcher();
-
-  var options = opts;
+  this.options = opts;
   var remoteOptions = {};
 
-  var outgoingCallBacks = {};
-  var incomingCallBacks = {};
+  this.outgoingCallBacks = {};
+  this.incomingCallBacks = {};
 
   this.sockjs_url = '/echo';
   this.preinitialized = false;
@@ -29,142 +26,6 @@ var Samsaara = function (opts){
     windowHeight: window.innerHeight,
     pixelRatio: window.devicePixelRatio || 1,
     timeOffset: 0
-  };
-
-  if(localStorage.originalID !== ""){
-    this.navInfo.originalID = localStorage.originalID;
-  }
-
-  this.callItBack = function(id, owner, args){
-    // console.log("CALL IT BACK", id, owner, args);
-    // console.log("CALL IT BACK", incomingCallBacks);
-    incomingCallBacks[id].callBack.apply(incomingCallBacks[id].from, args);
-    delete incomingCallBacks[id];
-  };
-
-  //ToDO Unniversal Transmit without Object in call
-  this.func = function(fname){
-    var args = arguments;
-    var packet = {};
-    packet.func = fname;
-
-    if(args.length > 1){
-      packet.args = [];
-      for(var i = 1; i < args.length-1; i++){
-        packet.args.push(args[i]);
-      }
-      if(typeof args[args.length-1] == "function"){
-        self.send(packet, args[args.length-1]);
-      }
-      else{
-        packet.args.push(args[args.length-1]);
-        self.send(packet);
-      }
-    }
-    else{
-      self.send(packet);
-    }
-  };
-
-  function callbackClosure(temp){
-  return function(results, done){
-    console.log ("ALERTS",results);
-    temp.status = results.toString();
-    done();
-  };
-}
-
-  // this.sendRoute = function(packet){
-
-  //   var message;
-  //   if(packet.func !== undefined){
-  //     if(packet.func !== "calItBack"){
-  //       message = ["F", self.samsaaraToken, packet.func, packet.args, packet.callBack ];
-  //     }
-  //     else{
-  //       message = ["C", self.samsaaraToken, packet.args[0], packet.args[1], packet.args[2] ];        
-  //     }
-  //   }
-  //   self.sockjs.send( JSON.stringify(message) );
-  // }
-
-  // this.sendCallBack = function(id, owner, args){
-  //   var message = ["C", self.samsaaraToken, id, owner, args ];
-  // }
-
-
-  this.nsSend = function(ns, packet, callBack){
-    packet.ns = ns;
-    self.send(packet, callBack);
-  };
-
-  this.send = function(packet, callBack){
-
-    var packetJSON = packet;
-
-    if(callBack !== undefined && typeof callBack === "function"){
-      var callBackID = makeIdAlpha(12);
-      incomingCallBacks[callBackID] = {callBack: callBack};
-      packetJSON.callBack = callBackID;
-    }
-
-    if(self.preinitialized === true){
-      packetJSON.token = self.samsaaraToken;
-      self.sockjs.send( JSON.stringify(packetJSON) );
-    }
-    else{
-      self.functionQueue.push( packetJSON );
-    }
-  };
-
-  this.heartBeater = function(){
-    self.sockjs.send('H');
-  };
-
-  this.sendPrepared = function(packetJSON){
-    packetJSON.token = self.samsaaraToken;
-    self.sockjs.send( JSON.stringify(packetJSON) );
-  };
-
-  this.reportError = function(code, message){
-    console.log("ARGYLE SERVER ERROR:", code, message);
-  };
-
-  this.testTime = function(stopTime, serverTime, callBack){
-    var serverOffset = serverTime - stopTime;
-    var theTime = getCurrentTime();
-    var errorDifference = theTime - serverOffset;
-
-    if(callBack && typeof callBack === "function") callBack(serverTime, theTime, errorDifference);
-  };
-
-  this.updateOffset = function(timeOffset){
-    console.log("Samsaara: updateOffset():", timeOffset);
-    self.navInfo.timeOffset = timeOffset;
-  };
-
-  this.getNavInfo = function(callBack){
-    if(callBack && typeof callBack === "function") callBack( self.navInfo );
-  };
-
-  this.addToGroups = function(callBack){
-    if(callBack && typeof callBack === "function") callBack( options.groups );
-    //self.send( {func:"addToGroup", args:[self.groups] } );
-  };
-
-  this.getGeoLocation = function(callBack){
-    if (navigator.geolocation){
-      navigator.geolocation.getCurrentPosition(function (position){
-        self.navInfo.geoposition = position;
-        if(callBack && typeof callBack === "function") callBack(null, self.navInfo.geoposition);
-      }, function(err){
-        if(callBack && typeof callBack === "function") callBack(err, null);
-      });
-    }
-  };
-
-  this.getWindowSize = function(callBack){
-    if(callBack && typeof callBack === "function") callBack(window.innerWidth, window.innerHeight);
   };
 
   if(opts){
@@ -190,34 +51,33 @@ var Samsaara = function (opts){
 
   this.sockjs = {};
   this.heartBeat = {};
-  this.initEvent = new Event('initialized');
-
+  this.sockConnectionTimerTime = 0;
+  this.sockConnectionTimer = null;
 
   this.initSock = function(sessionInfo){
 
     self.sockjs = new SockJS(self.sockjs_url);
 
-    console.log("Session INFO:", sessionInfo);
+    // console.log("Session INFO:", sessionInfo);
 
     //ON OPEN
-    self.sockjs.onopen = function(){
+    self.sockjs.onopen = function(){      
       console.log('[*] open', self.sockjs.protocol);
+      self.sockConnectionTimerTime = 0;
 
       clearInterval(self.heartBeat);
       self.heartBeat = setInterval(self.heartBeater, 10000);
 
-      self.navInfo.sessionInfo = sessionInfo;
-
-      if(options && options.session){
-        // self.sockjs.send( JSON.stringify( { login: sessionInfo } ));
+      if(self.options && self.options.session){
 
         console.log("*******************ATTEMPTING TO LOG IN SESSION");
 
         self.send({func: "requestRegistrationToken"}, function (err, registrationToken){
           httpGet("/registerSamsaaraConnection?regtoken=" + registrationToken, function (sessionInfo){   
-          console.log("SESSION INFO", sessionInfo);         
+            var sessionInfoParsed = JSON.parse(sessionInfo);
+            console.log("SESSION INFO", sessionInfoParsed, sessionInfoParsed.sessionID, sessionInfoParsed.userID);        
             if(sessionInfo.err === undefined){
-              self.navInfo.sessionInfo = {sessionID: sessionInfo.sessionID, userID: sessionInfo.userID};
+              self.navInfo.sessionInfo = {sessionID: sessionInfoParsed.sessionID, userID: sessionInfoParsed.userID};
               self.sockjs.send( JSON.stringify( { login: [registrationToken, sessionInfo] } ));
             }
           });
@@ -234,97 +94,231 @@ var Samsaara = function (opts){
       self.evalMessage(messageObj);
     };
 
+    var connectionTimer;
+
     //ON CLOSE
     self.sockjs.onclose = function(e){
       console.log('[*] close');
+      self.preinitialized = false;
 
-      if(self.navInfo.sessionInfo){
-        self.initSock(sessionInfo);
-      }
-      else{ self.initSock("unsessioned"); }
+      self.sockConnectionTimer = setTimeout(function(){
+
+        if(self.navInfo.sessionInfo){
+          self.initSock(sessionInfo);
+        }
+        else{ self.initSock("unsessioned"); }
+
+        var timeoutTime = self.sockConnectionTimerTime >= (15000/2) ? 15000 : (self.sockConnectionTimerTime*2 + 400);
+        self.sockConnectionTimerTime = timeoutTime;
+
+      }, self.sockConnectionTimerTime);
     };
   };
 
-
   //getSessionID and userName and on callback initialized
   self.initSock({id: "anon" + makeIdAlpha(15), name: "user" + makeIdAlpha(15)});
-
-
-
-  this.evalMessage = function (messageObj){
-
-    if(messageObj.samsaaraID){
-
-      self.samsaaraID = messageObj.samsaaraID;
-
-      console.log("localstorage.originalID",  localStorage.originalID);
-      console.log("self.navInfo.originalID",  self.navInfo.originalID);
-
-      if(self.navInfo.originalID === undefined || localStorage.originalID === undefined){
-        self.navInfo.originalID = self.samsaaraID;
-        localStorage.originalID = self.samsaaraID;
-      }
-
-      console.log("CONNECTED AS:" + self.samsaaraID);
-    }
-
-    if(messageObj.samsaaraToken){
-      self.samsaaraToken = messageObj.samsaaraToken;
-      console.log("Token Received:", self.samsaaraToken);
-
-      if(!self.preinitialized){
-        self.preinitialized = true;
-        if(self.functionQueue.length > 0){
-          for(var i=0; i < self.functionQueue.length; i++){
-            self.send( self.functionQueue[i] );
-          }
-          self.functionQueue = [];
-        }
-      }
-    }
-
-
-    if(messageObj.func){
-
-      if(validProperty(messageObj.func, self)){
-
-        //handle client callbacks via a callback id that is stored and sent back to the client with new arguments
-
-        if(messageObj.callBack){
-
-          var callBackID = messageObj.callBack;
-
-          //console.log(messageObj.func, "CALLBACK FROM SERVER Id:", messageObj.callBack, "Owner:", messageObj.owner);
-
-          outgoingCallBacks[callBackID] = function(){
-            var args = Array.prototype.slice.call(arguments);
-            eval("var owner = '" + messageObj.owner + "';");
-            eval("var id = '" + callBackID + "';");
-            self.send({func: "callItBack", args: [id, owner, args] } );
-
-            delete outgoingCallBacks[id];
-          };
-
-          if(!messageObj.args){
-            messageObj.args = [];
-          }
-
-          messageObj.args.push(outgoingCallBacks[callBackID]);
-        }
-
-        self[messageObj.func].apply(this, messageObj.args);
-
-      }
-      else{
-        console.log("Samsaara Error:", messageObj.func, "Is not a valid property of this Samsaara Object");
-      }
-    }
-  };
 };
 
 
+Samsaara.prototype = new EventEmitter();
+
+
+Samsaara.prototype.evalMessage = function (messageObj){
+  var self = this;
+
+  if(messageObj.samsaaraID){
+    self.samsaaraID = messageObj.samsaaraID;
+    console.log("CONNECTED AS:" + self.samsaaraID);
+  }
+
+  if(messageObj.samsaaraToken){
+    self.samsaaraToken = messageObj.samsaaraToken;
+    console.log("Token Received:", self.samsaaraToken);
+
+    if(!self.preinitialized){
+      self.preinitialized = true;
+      if(self.functionQueue.length > 0){
+        for(var i=0; i < self.functionQueue.length; i++){
+          self.send( self.functionQueue[i] );
+        }
+        self.functionQueue = [];
+      }
+    }
+  }
+
+  if(messageObj.func){
+
+    if(validProperty(messageObj.func, self)){
+
+      if(messageObj.callBack){        
+        var callBackID = messageObj.callBack;
+        //console.log(messageObj.func, "CALLBACK FROM SERVER Id:", messageObj.callBack, "Owner:", messageObj.owner);
+
+        this.outgoingCallBacks[callBackID] = function(){
+          var args = Array.prototype.slice.call(arguments);
+          eval("var owner = '" + messageObj.owner + "';");
+          eval("var id = '" + callBackID + "';");
+          self.send({func: "callItBack", args: [id, owner, args] } );
+
+          delete self.outgoingCallBacks[id];
+        };
+
+        if(!messageObj.args){
+          messageObj.args = [];
+        }
+        messageObj.args.push(this.outgoingCallBacks[callBackID]);
+      }
+
+      self[messageObj.func].apply(this, messageObj.args);
+
+    }
+    else{
+      console.log("Samsaara Error:", messageObj.func, "Is not a valid property of this Samsaara Object");
+    }
+  }
+};
+
+
+Samsaara.prototype.callItBack = function(id, owner, args){
+  // console.log("CALL IT BACK", id, owner, args);
+  // console.log("CALL IT BACK", incomingCallBacks);
+  this.incomingCallBacks[id].callBack.apply(this.incomingCallBacks[id].from, args);
+  delete this.incomingCallBacks[id];
+};
+
+//ToDO Unniversal Transmit without Object in call
+Samsaara.prototype.func = function(fname){
+  var args = arguments;
+  var packet = {};
+  packet.func = fname;
+
+  if(args.length > 1){
+    packet.args = [];
+    for(var i = 1; i < args.length-1; i++){
+      packet.args.push(args[i]);
+    }
+    if(typeof args[args.length-1] == "function"){
+      this.send(packet, args[args.length-1]);
+    }
+    else{
+      packet.args.push(args[args.length-1]);
+      this.send(packet);
+    }
+  }
+  else{
+    this.send(packet);
+  }
+};
+
+function callbackClosure(temp){
+  return function(results, done){
+    console.log ("ALERTS",results);
+    temp.status = results.toString();
+    done();
+  };
+}
+
+
+
+  // this.sendRoute = function(packet){
+
+  //   var message;
+  //   if(packet.func !== undefined){
+  //     if(packet.func !== "calItBack"){
+  //       message = ["F", this.samsaaraToken, packet.func, packet.args, packet.callBack ];
+  //     }
+  //     else{
+  //       message = ["C", this.samsaaraToken, packet.args[0], packet.args[1], packet.args[2] ];        
+  //     }
+  //   }
+  //   this.sockjs.send( JSON.stringify(message) );
+  // }
+
+  // this.sendCallBack = function(id, owner, args){
+  //   var message = ["C", this.samsaaraToken, id, owner, args ];
+  // }
+
+
+Samsaara.prototype.nsSend = function(ns, packet, callBack){
+  packet.ns = ns;
+  this.send(packet, callBack);
+};
+
+Samsaara.prototype.send = function(packet, callBack){
+
+  var packetJSON = packet;
+
+  if(callBack !== undefined && typeof callBack === "function"){
+    var callBackID = makeIdAlpha(12);
+    this.incomingCallBacks[callBackID] = {callBack: callBack};
+    packetJSON.callBack = callBackID;
+  }
+
+  if(this.preinitialized === true){
+    packetJSON.token = this.samsaaraToken;
+    this.sockjs.send( JSON.stringify(packetJSON) );
+  }
+  else{
+    this.functionQueue.push( packetJSON );
+  }
+};
+
+Samsaara.prototype.heartBeater = function(){
+  this.sockjs.send('H');
+};
+
+Samsaara.prototype.sendPrepared = function(packetJSON){
+  packetJSON.token = this.samsaaraToken;
+  this.sockjs.send( JSON.stringify(packetJSON) );
+};
+
+Samsaara.prototype.reportError = function(code, message){
+  console.log("ARGYLE SERVER ERROR:", code, message);
+};
+
+Samsaara.prototype.testTime = function(stopTime, serverTime, callBack){
+  var serverOffset = serverTime - stopTime;
+  var theTime = getCurrentTime();
+  var errorDifference = theTime - serverOffset;
+
+  if(callBack && typeof callBack === "function") callBack(serverTime, theTime, errorDifference);
+};
+
+Samsaara.prototype.updateOffset = function(timeOffset){
+  console.log("Samsaara: updateOffset():", timeOffset);
+  this.navInfo.timeOffset = timeOffset;
+};
+
+Samsaara.prototype.getNavInfo = function(callBack){
+  if(callBack && typeof callBack === "function") callBack( this.navInfo );
+};
+
+Samsaara.prototype.addToGroups = function(callBack){
+  if(callBack && typeof callBack === "function") callBack( this.options.groups );
+  //this.send( {func:"addToGroup", args:[self.groups] } );
+};
+
+Samsaara.prototype.getGeoLocation = function(callBack){
+  var self = this;
+
+  if (navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(function (position){
+      self.navInfo.geoposition = position;
+      if(callBack && typeof callBack === "function") callBack(null, self.navInfo.geoposition);
+    }, function(err){
+      if(callBack && typeof callBack === "function") callBack(err, null);
+    });
+  }
+};
+
+Samsaara.prototype.getWindowSize = function(callBack){
+  if(callBack && typeof callBack === "function") callBack(window.innerWidth, window.innerHeight);
+};
+
 Samsaara.prototype.samsaaraInitialized = function(whichOne, callBack){
-  self.dispatchEvent(self.initEvent);
+  // console.log("SAMSAARA INITIALIZED");
+  // this.dispatchEvent(this.initEvent);
+  this.emitEvent("initialized");
   if(callBack && typeof callBack === "function") callBack(whichOne);
 };
 
@@ -332,48 +326,14 @@ Samsaara.prototype.updateToken = function(oldToken, newToken, callBack){
 
   console.log("UPDATING TOKEN", oldToken, newToken);
 
-  if(self.samsaaraToken == oldToken){
-    self.samsaaraToken = newToken;
+  if(this.samsaaraToken == oldToken){
+    this.emitEvent("authenticated", [this.navInfo.sessionInfo.userID]);
+    this.samsaaraToken = newToken;
     if(callBack && typeof callBack === "function") callBack(newToken);
   }
 };
 
-Samsaara.prototype.extendAsEventDispatcher = function(){
-  if (this._listeners == null){
-    this._listeners = [];
-  }
-  this.isEventDispatcher = true;
 
-  if (typeof(this.dispatchEvent) == "undefined"){
-    this.dispatchEvent = function(eventObject){
-      for ( var i = 0; i < this._listeners.length; i++){
-        var test = this._listeners[i];
-        if (test.type === eventObject.type){
-          test.callback(eventObject);
-          break;
-        }
-      }
-    };
-  }
-
-  if (typeof(this.addEventListener) == "undefined"){
-    this.addEventListener = function (type, callback, capture){
-      // no dupes
-      var declared = false;
-      for ( var i = 0; i < this._listeners.length; i++){
-        var test = this._listeners[i];
-        if (test.type === type && test.callback === callback){
-          declared = true;
-          break;
-        }
-      }
-
-      if (!declared){
-        this._listeners.push({'type':type,'callback':callback,'capture':capture});
-      }
-    };
-  }
-};
 
 
 //SUPPORTING FUNCTIONS////////////////////////////////////////////////////////////////////////////
@@ -523,8 +483,6 @@ function checkDifference(a, b){
     return true;
   }
 }
-
-
 
 function getScreenInfo(){
 

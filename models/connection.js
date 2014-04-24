@@ -1,5 +1,5 @@
 /*!
- * argyleSocks - Connection Constructor
+ * samsaaraSocks - Connection Constructor
  * Copyright(c) 2013 Arjun Mehta <arjun@newlief.com>
  * MIT Licensed
  */
@@ -10,7 +10,7 @@ var crypto = require('crypto');
 var path = require("path");
 var log = require("../lib/log.js");
 var moduleName = path.basename(module.filename);
-var argyle;
+var samsaara;
 
 var contextController = require('../lib/contextController.js');
 var contexts = contextController.contexts;
@@ -18,7 +18,7 @@ var contexts = contextController.contexts;
 exports = module.exports = Connection;
 
 exports.initialize = function(parent){
-  argyle = parent;
+  samsaara = parent;
 };
 
 
@@ -34,7 +34,6 @@ function Connection(conn, connID){
   this.token = helper.makeUniqueHash('sha1', this.key, [this.userID]);
 
   this.connectionClass = "native";
-  // this.class = "argyleConnection";
 
   this.initialized = false;
   this.initializeAttributes = {};
@@ -76,14 +75,6 @@ Connection.prototype.write = function(message){
   this.conn.write(message);
 };
 
-// Connection.prototype.currentContext = {
-//     getValue: function(){
-//         return contexts[this.context];
-//     },
-//     setValue: function(val){
-//         this.context = val.contextID;
-//     }
-// };
 
 Object.defineProperty(Connection.prototype, 'currentContext', {
     get: function() {
@@ -120,7 +111,7 @@ Connection.prototype.receive = function(messageObj){
 
 Connection.prototype.getContext = function(){
   if(this.context !== null){
-    return argyle.connections[this.context];
+    return samsaara.connections[this.context];
   }
   else{
     return false;

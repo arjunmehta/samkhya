@@ -1,5 +1,5 @@
 /*!
- * argyleSocks - Context Constructor
+ * samsaara - Context Access Constructor
  * Copyright(c) 2013 Arjun Mehta <arjun@newlief.com>
  * MIT Licensed
  */
