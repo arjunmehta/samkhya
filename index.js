@@ -146,13 +146,17 @@ Samsaara.prototype.initialize = function (server, app, opts){
 
       this.comStore.initialize(this, this.pub, this.sub, this.client);
 
-      this.contextController.setRedisStore(true);
-      this.authentication.setRedisStore(true);
-
     }
     else{
       this.comStore = require('./lib/communication-memory.js');
       this.comStore.initialize(this);
+    }
+
+    this.contextController.setRedisStore(true);
+    this.authentication.setRedisStore(true);
+
+    for(var func in this.authentication.exported){
+      this[func] = this.authentication.exported[func];
     }
 
     if(opts.couchStore){
@@ -173,14 +177,11 @@ Samsaara.prototype.initialize = function (server, app, opts){
 
         var registrationToken = req.query.regtoken;
 
-        console.log("REGISTER CONNECTION ROUTE:", registrationToken);
-
         self.authentication.retrieveRegistrationToken(registrationToken, function (err, reply){
           if(!err){
             // Can this somehow be supplied by the developer?
             self.authentication.getRequestSessionInfo(req.sessionID, function (sessionID, userID){              
               var keyObject = { sessionID: sessionID, userID: userID, tokenKey: reply };
-              console.log(keyObject);
               res.send(keyObject);
             });
           }
