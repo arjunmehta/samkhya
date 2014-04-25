@@ -2,9 +2,9 @@
 var Samsaara = function (opts){
 
   var self = this;
-
-  this.options = opts;
   var remoteOptions = {};
+
+  this.options = opts;  
 
   this.outgoingCallBacks = {};
   this.incomingCallBacks = {};
@@ -58,11 +58,9 @@ var Samsaara = function (opts){
 
     self.sockjs = new SockJS(self.sockjs_url);
 
-    // console.log("Session INFO:", sessionInfo);
-
-    //ON OPEN
-    self.sockjs.onopen = function(){      
+    self.sockjs.onopen = function(){
       console.log('[*] open', self.sockjs.protocol);
+
       self.sockConnectionTimerTime = 0;
 
       clearInterval(self.heartBeat);
@@ -70,12 +68,11 @@ var Samsaara = function (opts){
 
       if(self.options && self.options.session){
 
-        console.log("*******************ATTEMPTING TO LOG IN SESSION");
+        // console.log("*******************ATTEMPTING TO LOG IN SESSION");
 
         self.send({func: "requestRegistrationToken"}, function (err, registrationToken){
-          httpGet("/registerSamsaaraConnection?regtoken=" + registrationToken, function (sessionInfo){   
+          httpGet("/registerSamsaaraConnection?regtoken=" + registrationToken, function (sessionInfo){
             var sessionInfoParsed = JSON.parse(sessionInfo);
-            console.log("SESSION INFO", sessionInfoParsed, sessionInfoParsed.sessionID, sessionInfoParsed.userID);        
             if(sessionInfo.err === undefined){
               self.navInfo.sessionInfo = {sessionID: sessionInfoParsed.sessionID, userID: sessionInfoParsed.userID};
               self.sockjs.send( JSON.stringify( { login: [registrationToken, sessionInfo] } ));
@@ -117,6 +114,11 @@ var Samsaara = function (opts){
 
   //getSessionID and userName and on callback initialized
   self.initSock({id: "anon" + makeIdAlpha(15), name: "user" + makeIdAlpha(15)});
+
+  this.heartBeater = function(){    
+    self.sockjs.send('H');
+  };
+
 };
 
 
@@ -126,16 +128,16 @@ Samsaara.prototype = new EventEmitter();
 Samsaara.prototype.evalMessage = function (messageObj){
   var self = this;
 
-  if(messageObj.samsaaraID){
+  if(messageObj.samsaaraID !== undefined){
     self.samsaaraID = messageObj.samsaaraID;
     console.log("CONNECTED AS:" + self.samsaaraID);
   }
 
-  if(messageObj.samsaaraToken){
+  if(messageObj.samsaaraToken !== undefined){
     self.samsaaraToken = messageObj.samsaaraToken;
     console.log("Token Received:", self.samsaaraToken);
 
-    if(!self.preinitialized){
+    if(self.preinitialized === false){
       self.preinitialized = true;
       if(self.functionQueue.length > 0){
         for(var i=0; i < self.functionQueue.length; i++){
@@ -146,11 +148,11 @@ Samsaara.prototype.evalMessage = function (messageObj){
     }
   }
 
-  if(messageObj.func){
+  if(messageObj.func !== undefined){
 
-    if(validProperty(messageObj.func, self)){
+    if(self[messageObj.func] !== undefined){
 
-      if(messageObj.callBack){        
+      if(messageObj.callBack !== undefined){
         var callBackID = messageObj.callBack;
         //console.log(messageObj.func, "CALLBACK FROM SERVER Id:", messageObj.callBack, "Owner:", messageObj.owner);
 
@@ -163,7 +165,7 @@ Samsaara.prototype.evalMessage = function (messageObj){
           delete self.outgoingCallBacks[id];
         };
 
-        if(!messageObj.args){
+        if(messageObj.args === undefined){
           messageObj.args = [];
         }
         messageObj.args.push(this.outgoingCallBacks[callBackID]);
@@ -228,7 +230,7 @@ function callbackClosure(temp){
   //       message = ["F", this.samsaaraToken, packet.func, packet.args, packet.callBack ];
   //     }
   //     else{
-  //       message = ["C", this.samsaaraToken, packet.args[0], packet.args[1], packet.args[2] ];        
+  //       message = ["C", this.samsaaraToken, packet.args[0], packet.args[1], packet.args[2] ];
   //     }
   //   }
   //   this.sockjs.send( JSON.stringify(message) );
@@ -263,9 +265,7 @@ Samsaara.prototype.send = function(packet, callBack){
   }
 };
 
-Samsaara.prototype.heartBeater = function(){
-  this.sockjs.send('H');
-};
+
 
 Samsaara.prototype.sendPrepared = function(packetJSON){
   packetJSON.token = this.samsaaraToken;
@@ -281,7 +281,7 @@ Samsaara.prototype.testTime = function(stopTime, serverTime, callBack){
   var theTime = getCurrentTime();
   var errorDifference = theTime - serverOffset;
 
-  if(callBack && typeof callBack === "function") callBack(serverTime, theTime, errorDifference);
+  if(typeof callBack === "function") callBack(serverTime, theTime, errorDifference);
 };
 
 Samsaara.prototype.updateOffset = function(timeOffset){
@@ -290,11 +290,11 @@ Samsaara.prototype.updateOffset = function(timeOffset){
 };
 
 Samsaara.prototype.getNavInfo = function(callBack){
-  if(callBack && typeof callBack === "function") callBack( this.navInfo );
+  if(typeof callBack === "function") callBack( this.navInfo );
 };
 
 Samsaara.prototype.addToGroups = function(callBack){
-  if(callBack && typeof callBack === "function") callBack( this.options.groups );
+  if(typeof callBack === "function") callBack( this.options.groups );
   //this.send( {func:"addToGroup", args:[self.groups] } );
 };
 
@@ -304,32 +304,31 @@ Samsaara.prototype.getGeoLocation = function(callBack){
   if (navigator.geolocation){
     navigator.geolocation.getCurrentPosition(function (position){
       self.navInfo.geoposition = position;
-      if(callBack && typeof callBack === "function") callBack(null, self.navInfo.geoposition);
+      if(typeof callBack === "function") callBack(null, self.navInfo.geoposition);
     }, function(err){
-      if(callBack && typeof callBack === "function") callBack(err, null);
+      if(typeof callBack === "function") callBack(err, null);
     });
   }
 };
 
 Samsaara.prototype.getWindowSize = function(callBack){
-  if(callBack && typeof callBack === "function") callBack(window.innerWidth, window.innerHeight);
+  if(typeof callBack === "function") callBack(window.innerWidth, window.innerHeight);
 };
+
 
 Samsaara.prototype.samsaaraInitialized = function(whichOne, callBack){
-  // console.log("SAMSAARA INITIALIZED");
-  // this.dispatchEvent(this.initEvent);
   this.emitEvent("initialized");
-  if(callBack && typeof callBack === "function") callBack(whichOne);
+  if(typeof callBack === "function") callBack(whichOne);
 };
 
-Samsaara.prototype.updateToken = function(oldToken, newToken, callBack){
 
+Samsaara.prototype.updateToken = function(oldToken, newToken, callBack){
   console.log("UPDATING TOKEN", oldToken, newToken);
 
   if(this.samsaaraToken == oldToken){
     this.emitEvent("authenticated", [this.navInfo.sessionInfo.userID]);
     this.samsaaraToken = newToken;
-    if(callBack && typeof callBack === "function") callBack(newToken);
+    if(typeof callBack === "function") callBack(newToken);
   }
 };
 
@@ -473,16 +472,6 @@ var BrowserDetect = {
 BrowserDetect.init();
 
 
-
-
-function checkDifference(a, b){
-  if(a == b){
-    return false;
-  }
-  else{
-    return true;
-  }
-}
 
 function getScreenInfo(){
 

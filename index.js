@@ -16,7 +16,6 @@ var self;
 
 exports = module.exports = new Samsaara();
 
-var getClassOf = Function.prototype.call.bind(Object.prototype.toString);
 
 //ROOT ARGYLE OBJECT////////////////////////////////////////////////////////////////////////////
 function Samsaara(){
@@ -128,8 +127,6 @@ Samsaara.prototype.initialize = function (server, app, opts){
     if(opts.redisStore){
       this.comStore = require('./lib/communication-redis.js');
       log.info("setting opts.redisStore");
-
-      // console.log("REDIS CLASS:", opts.redisPub.constructor.name, getClassOf(opts.redisSub),getClassOf(opts.redisClient));
 
       if(opts.redisPub && opts.redisSub && opts.redisClient){
         this.pub = opts.redisPub;
