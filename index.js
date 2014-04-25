@@ -5,197 +5,182 @@
  */
 
 var log = require("./lib/log.js");
+var helper = require('./lib/helper.js');
 
-var sockjs = require('sockjs');
 var EventEmitter = require('events').EventEmitter;
 
-var helper = require('./lib/helper.js');
-var config = require('./lib/config.js');
+var samsaara = (function(samsaara){
 
-var self;
+  var config = require('./lib/config.js');
+  var sockjs = require('sockjs');
 
-exports = module.exports = new Samsaara();
-
-
-//ROOT ARGYLE OBJECT////////////////////////////////////////////////////////////////////////////
-function Samsaara(){
-
-  self = this;
-  
-  this.config = config;
+  samsaara = new EventEmitter();
 
   config.options = {
     pathTo: "/echo"
   };
 
-  this.sockjsServer = sockjs.createServer();
+  var sockjsServer = sockjs.createServer();
 
   // require and initialize connection controller
-  this.connectionController = require('./lib/connectionController.js');
-  this.connectionController.initialize(this);
+  var connectionController = require('./lib/connectionController.js');
+  connectionController.initialize(samsaara);
 
   // require and initialize communication controller
-  this.communication = require('./lib/communication.js');
-  this.communication.initialize(this);
+  var communication = require('./lib/communication.js');
+  communication.initialize(samsaara);
 
   // require and initialize authentication controller
-  this.authentication = require('./lib/authentication.js');
-  this.authentication.initialize(this);
- 
+  var authentication = require('./lib/authentication.js');
+  authentication.initialize(samsaara);
+
   // require and initialize context controller
-  this.contextController = require('./lib/contextController.js'); 
-  this.contextController.initialize(this);
+  var contextController = require('./lib/contextController.js'); 
+  contextController.initialize(samsaara);
 
   // require and initialize grouping and namespace controller
-  this.grouping = require('./lib/grouping.js');
-  this.grouping.initialize(this);
+  var grouping = require('./lib/grouping.js');
+  grouping.initialize(samsaara);
 
   var bringToMain = {
-    connections: this.connectionController.connections,
-    sendTo: this.communication.sendTo,
-    sendToGroup: this.communication.sendToGroup,
+    connections: connectionController.connections,
+    sendTo: communication.sendTo,
+    sendToGroup: communication.sendToGroup,
 
-    contexts: this.contextController.contexts,
-    openContext: this.contextController.openContext,
-    openContextWithData: this.contextController.openContextWithData,
-    isContextOpen: this.contextController.isContextOpen,
-    switchContext: this.contextController.switchContext,
-    linkContext: this.contextController.linkContext,
-    clearFromContext: this.contextController.clearFromContext,
+    contexts: contextController.contexts,
+    openContext: contextController.openContext,
+    openContextWithData: contextController.openContextWithData,
+    isContextOpen: contextController.isContextOpen,
+    switchContext: contextController.switchContext,
+    linkContext: contextController.linkContext,
+    clearFromContext: contextController.clearFromContext,
 
-    addUserSession: this.authentication.addUserSession,
-    removeUserSession: this.authentication.removeUserSession,
+    addUserSession: authentication.addUserSession,
+    removeUserSession: authentication.removeUserSession,
 
-    Context: this.contextController.Context,
-    Access: this.contextController.Access,
-    Connection: this.connectionController.Connection,
+    Context: contextController.Context,
+    Access: contextController.Access,
+    Connection: connectionController.Connection,
 
-    groups: this.grouping.groups,
-    createGroup: this.grouping.createGroup,
-    inGroup: this.grouping.inGroup,
-    addToGroup: this.grouping.addToGroup,
-    removeFromGroup: this.grouping.removeFromGroup,
-    expose: this.grouping.expose,
-    exposeNamespace: this.grouping.exposeNamespace
+    groups: grouping.groups,
+    createGroup: grouping.createGroup,
+    inGroup: grouping.inGroup,
+    addToGroup: grouping.addToGroup,
+    removeFromGroup: grouping.removeFromGroup,
+    expose: grouping.expose,
+    exposeNamespace: grouping.exposeNamespace
   };
 
   for(var func in bringToMain){
-    this[func] = bringToMain[func];
+    samsaara[func] = bringToMain[func];
   }
 
   // Initialize Models
-  this.Context.initialize(this);
-  this.Connection.initialize(this);
+  samsaara.Context.initialize(samsaara);
+  samsaara.Connection.initialize(samsaara);
 
-  this.expose({
-    windowResize: this.connectionController.windowResize,
-    geoPosition: this.connectionController.geoPosition,
-    callItBack: this.communication.callItBack,
-    requestRegistrationToken: this.authentication.requestRegistrationToken
+  samsaara.expose({
+    windowResize: connectionController.windowResize,
+    geoPosition: connectionController.geoPosition,
+    callItBack: communication.callItBack,
+    requestRegistrationToken: authentication.requestRegistrationToken
   });
 
-  this.expose({
-    switchContext: this.contextController.switchContext
+  samsaara.expose({
+    switchContext: contextController.switchContext
   }, "samsaara");
-    
-}
 
-
-
-
-
-
-//EVENT EMITTER PROTOTYPE
-Samsaara.prototype.__proto__ = EventEmitter.prototype;
-
-
-
-
-//MAIN CONTROLLER FUNCTION////////////////////////////////////////////////////////////////////////////
-Samsaara.prototype.initialize = function (server, app, opts){
 
   var sockjsOpts = { _pathTo: "/echo" };
 
-  if(opts){
-    config.options = opts;
+  samsaara.initialize = function (server, app, opts){
 
-    if(opts.pathTo){
-      sockjsOpts._pathTo = opts.pathTo;
-      log.info("setting opts.pathTo", sockjsOpts._pathTo);
-    }
+    if(opts){
+      config.options = opts;
 
-    if(opts.redisStore){
-      this.comStore = require('./lib/communication-redis.js');
-      log.info("setting opts.redisStore");
+      if(opts.pathTo){
+        sockjsOpts._pathTo = opts.pathTo;
+        log.info("setting opts.pathTo", sockjsOpts._pathTo);
+      }
 
-      if(opts.redisPub && opts.redisSub && opts.redisClient){
-        this.pub = opts.redisPub;
-        this.sub = opts.redisSub;
-        this.client = opts.redisClient;
+      if(opts.redisStore){
+        samsaara.comStore = require('./lib/communication-redis.js');
+        log.info("setting opts.redisStore");
+
+        if(opts.redisPub && opts.redisSub && opts.redisClient){
+          samsaara.pub = opts.redisPub;
+          samsaara.sub = opts.redisSub;
+          samsaara.client = opts.redisClient;
+        }
+        else{
+          throw "RedisClient for redisPub, redisSub and redisClient must be provided in order for samsaara to work using Redis.";
+        }
+
+        samsaara.comStore.initialize(samsaara, samsaara.pub, samsaara.sub, samsaara.client);
+
       }
       else{
-        throw "RedisClient for redisPub, redisSub and redisClient must be provided in order for samsaara to work using Redis.";
+        samsaara.comStore = require('./lib/communication-memory.js');
+        samsaara.comStore.initialize(samsaara);
       }
 
-      this.comStore.initialize(this, this.pub, this.sub, this.client);
+      contextController.setRedisStore(true);
+      authentication.setRedisStore(true);
 
-    }
-    else{
-      this.comStore = require('./lib/communication-memory.js');
-      this.comStore.initialize(this);
-    }
+      for(var func in authentication.exported){
+        samsaara[func] = authentication.exported[func];
+      }
 
-    this.contextController.setRedisStore(true);
-    this.authentication.setRedisStore(true);
+      if(app){
 
-    for(var func in this.authentication.exported){
-      this[func] = this.authentication.exported[func];
-    }
-
-    if(app){
-
-      app.get('/samsaara/samsaara.js', function (req, res){
-        res.sendfile(__dirname + '/client/samsaara.js');
-      });
-
-      app.get('/samsaara/sockjs.js', function (req, res){
-        res.sendfile(__dirname + '/client/sockjs-0.3.min.js');
-      });
-
-      app.get('/samsaara/ee.js', function (req, res){
-        res.sendfile(__dirname + '/client/EventEmitter.min.js');
-      });
-
-      app.get('/registerSamsaaraConnection', function (req, res) {
-
-        var registrationToken = req.query.regtoken;
-
-        self.authentication.retrieveRegistrationToken(registrationToken, function (err, reply){
-          if(err === null){
-            // Can this somehow be supplied by the developer?
-            self.authentication.getRequestSessionInfo(req.sessionID, function (sessionID, userID){              
-              var keyObject = { sessionID: sessionID, userID: userID, tokenKey: reply };
-              res.send(keyObject);
-            });
-          }
-          else{
-            res.send({ err: err });
-          }
+        app.get('/samsaara/samsaara.js', function (req, res){
+          res.sendfile(__dirname + '/client/samsaara.js');
         });
-      });
+
+        app.get('/samsaara/sockjs.js', function (req, res){
+          res.sendfile(__dirname + '/client/sockjs-0.3.min.js');
+        });
+
+        app.get('/samsaara/ee.js', function (req, res){
+          res.sendfile(__dirname + '/client/EventEmitter.min.js');
+        });
+
+        app.get('/registerSamsaaraConnection', function (req, res) {
+
+          var registrationToken = req.query.regtoken;
+
+          authentication.retrieveRegistrationToken(registrationToken, function (err, reply){
+            if(err === null){
+              // Can this somehow be supplied by the developer?
+              authentication.getRequestSessionInfo(req.sessionID, function (sessionID, userID){              
+                var keyObject = { sessionID: sessionID, userID: userID, tokenKey: reply };
+                res.send(keyObject);
+              });
+            }
+            else{
+              res.send({ err: err });
+            }
+          });
+        });
+      }
+      else{
+        throw "You must provide an Express app object so Samsaara can attach its authentication route";
+      }
     }
-    else{
-      throw "You must provide an Express app object so Samsaara can attach its authentication route";
-    }
-  }
 
-  self.sockjsServer.installHandlers( server, { prefix: sockjsOpts._pathTo } );
+    sockjsServer.installHandlers( server, { prefix: sockjsOpts._pathTo } );
 
-  self.sockjsServer.on('connection', function (conn){
-    self.connectionController.createNewConnection(conn);
-  });
-};
+    sockjsServer.on('connection', function (conn){
+      connectionController.createNewConnection(conn);
+    });
+  };
+
+  return samsaara;
+
+}(this.samsaara = this.samsaara || {}));
 
 
+
+exports = module.exports = samsaara;
 
 
