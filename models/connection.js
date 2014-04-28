@@ -12,15 +12,14 @@ var log = require("../lib/log.js");
 var moduleName = path.basename(module.filename);
 var samsaara;
 
-var contextController = require('../lib/contextController.js');
-var contexts = contextController.contexts;
+var contexts = require('../lib/contextController.js').contexts;
+var connections = require('../lib/connectionController.js').connections;
 
 exports = module.exports = Connection;
 
 exports.initialize = function(parent){
   samsaara = parent;
 };
-
 
 
 function Connection(conn, connID){
@@ -69,12 +68,10 @@ function Connection(conn, connID){
 }
 
 
-
 Connection.prototype.write = function(message){
-  console.log(process.pid.toString(), "NATIVE write on", "NATIVE CONNECTION WRITING");
+  // console.log(process.pid.toString(), "NATIVE write on", "NATIVE CONNECTION WRITING");
   this.conn.write(message);
 };
-
 
 Object.defineProperty(Connection.prototype, 'currentContext', {
     get: function() {
@@ -84,7 +81,6 @@ Object.defineProperty(Connection.prototype, 'currentContext', {
         this.context = context.contextID;
     }
 });
-
 
 Connection.prototype.receive = function(messageObj){
 
@@ -107,14 +103,5 @@ Connection.prototype.receive = function(messageObj){
       log.info(process.pid, moduleName, process.pid, "ERROR: Token Mismatch:", this.token, messageObj.token);
     }
   }
-};
-
-Connection.prototype.getContext = function(){
-  if(this.context !== null){
-    return samsaara.connections[this.context];
-  }
-  else{
-    return false;
-  }  
 };
 

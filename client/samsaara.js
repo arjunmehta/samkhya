@@ -59,7 +59,7 @@ var samsaara = (function(samsaara){
       if(opts.windowSize){
         remoteOptions.windowSize = opts.windowSize;
         window.onresize = function(e){
-          send( {func:"windowResize", args:[window.innerWidth, window.innerHeight] } );
+          send( {internal:"windowResize", args:[window.innerWidth, window.innerHeight] } );
         };
       }
       if(opts.socksURL){
@@ -161,7 +161,7 @@ var samsaara = (function(samsaara){
 
       if(options && options.session){
         // console.log("*******************ATTEMPTING TO LOG IN SESSION");
-        send({func: "requestRegistrationToken"}, function (err, registrationToken){
+        send({internal: "requestRegistrationToken"}, function (err, registrationToken){
           httpGet("/registerSamsaaraConnection?regtoken=" + registrationToken, function (sessionInfo){
             var sessionInfoParsed = JSON.parse(sessionInfo);
             if(sessionInfo.err === undefined){
@@ -178,7 +178,8 @@ var samsaara = (function(samsaara){
     sockjs.onmessage = function(e){
       var messageObj = {};
       try{
-        messageObj = JSON.parse(e.data);        
+        messageObj = JSON.parse(e.data);   
+        console.log("INCOMING MESSAGE", e.data);
       }
       catch(err){
         console.log(err);
@@ -219,7 +220,10 @@ var samsaara = (function(samsaara){
         execute(exposedMethods[messageObj.func], messageObj);
       }
       else{
-        console.log("Samsaara Error:", messageObj.func, "Is not a valid property of this Samsaara Object");
+        console.log("Samsaara Error:", messageObj.func, "Is not a valid property of this Samsaara Object", messageObj);
+        if(messageObj.callBack){
+          send({internal: "callItBackError", args: [messageObj.callBack, messageObj.owner, ["ERROR: Invalid Object on Client"]] } );
+        }
       }
     }
 
@@ -265,7 +269,7 @@ var samsaara = (function(samsaara){
   function createCallBack(id, owner){
     var theCallBack = function(){
       var args = Array.prototype.slice.call(arguments);
-      send({func: "callItBack", args: [id, owner, args] } );
+      send({internal: "callItBack", args: [id, owner, args] } );
       delete outgoingCallBacks[id];
     };
     return theCallBack;

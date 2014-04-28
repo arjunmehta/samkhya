@@ -7,11 +7,12 @@
 var helper = require('../lib/helper.js');
 var crypto = require('crypto');
 
-var contextController = require('../lib/contextController.js');
-var contexts = contextController.contexts;
+var config = require('../lib/config');
+var contexts = require('../lib/contextController.js').contexts;
+
+var redisPub = config.redisPub;
 
 exports = module.exports = SymbolicConnection;
-var redisPub;
 
 function SymbolicConnection(symbolicData){
   this.id = symbolicData.nativeID;
@@ -24,13 +25,9 @@ function SymbolicConnection(symbolicData){
   this.token = symbolicData.token;
 }
 
-exports.initialize = function(pub){
-  redisPub = pub;
-};
-
 SymbolicConnection.prototype.write = function(message){
   console.log(process.pid.toString(), "SYMBOLIC write on", "SYMBOLIC CONNECTION PUBLISHING: Owner:", this.owner, this.nativeID);
-  redisPub.publish(this.nativeID, message);
+  redisPub.publish("NTV:"+this.nativeID, message);
 };
 
 Object.defineProperty(SymbolicConnection.prototype, 'currentContext', {

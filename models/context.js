@@ -6,7 +6,10 @@
 
 
 var helper = require('../lib/helper.js');
-var samsaara;
+var helper = require('../lib/config.js');
+
+var connections = require('../lib/connectionController').connections;
+var communication = require('../lib/communication');
 
 exports = module.exports = Context;
 
@@ -15,15 +18,6 @@ function Context(contextID){
   this.groups = { everyone: {} };
   this.access = { owner: true, read: {}, write: {}, readGroups:{}, writeGroups:{} };
 }
-
-Context.prototype = {
-  contextID: "",
-  access: {}
-};
-
-exports.initialize = function(parent){
-  samsaara = parent;
-};
 
 Context.prototype.assignID = function(contextID){
   this.contextID = contextID;
@@ -45,9 +39,11 @@ Context.prototype.resetPermissions = function(permissions){
 
 // SendToGroup, addCustomGroup, addToGroup, addAccess
 
-Context.prototype.sendTo = function(groupName, message, callBack){
+Context.prototype.sendToGroup = function(groupName, message, callBack){
   var group = this.groups[groupName];
-  samsaara.sendTo(group, message, callBack);
+  for(var connID in group){
+    communication.sendToClient(connID, message, callBack);
+  }  
 };
 
 Context.prototype.addGroup = function(groupName){
@@ -76,7 +72,7 @@ Context.prototype.removeConnection = function(connID){
     }
   }
 
-  samsaara.emit("clearedFromContext", samsaara.connections[connID], this.contextID);
+  config.emit("clearedFromContext", connections[connID], this.contextID);
 };
 
 
@@ -85,7 +81,6 @@ Context.prototype.addAccess = function(userName, privilege){
     this.access[privilege][userName] = true;
   }
 };
-
 
 Context.prototype.authenticate = function(whichOne, forWhat, includeGroups){
   if(this.access[forWhat][whichOne.sessionInfo.userID] !== undefined){
@@ -109,10 +104,10 @@ Context.prototype.authenticate = function(whichOne, forWhat, includeGroups){
 Context.prototype.hasReadAccess = function(whichOne){
   return this.authenticate(whichOne, "read");
 };
+
 Context.prototype.hasWriteAccess = function(whichOne){
   return this.authenticate(whichOne, "write");
 };
-
 
 Context.prototype.isOwner = function(whichOne){
   if(this.access.owner === whichOne.sessionInfo.userID){
