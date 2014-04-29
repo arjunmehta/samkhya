@@ -20,7 +20,8 @@
   "dependencies": {
     "sockjs": "0.3.7",
     "winston": "*",
-    "colors": "*"
+    "colors": "*",
+    "uuid": "~1.4.0"
   },
   "devDependencies": {
     "should": ">= 0.0.2"

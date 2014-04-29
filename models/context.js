@@ -6,7 +6,7 @@
 
 
 var helper = require('../lib/helper.js');
-var helper = require('../lib/config.js');
+var config = require('../lib/config.js');
 
 var connections = require('../lib/connectionController').connections;
 var communication = require('../lib/communication');

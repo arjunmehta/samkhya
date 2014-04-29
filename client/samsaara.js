@@ -4,6 +4,7 @@ var samsaara = (function(samsaara){
 
   var samsaaraID,
       samsaaraToken,
+      samsaaraOwner,
       preinitialized = false;
 
   var remoteOptions = {};
@@ -88,7 +89,7 @@ var samsaara = (function(samsaara){
     var packet = {};    
     packet.func = fname;
 
-    processAndSend(1, packet, args);
+    processAndSend(1, packet, args, samsaaraOwner);
   };
 
   var nsFunc = samsaara.nsFunc = function(ns, fname){
@@ -97,33 +98,31 @@ var samsaara = (function(samsaara){
     packet.ns = ns;
     packet.func = fname;
 
-    processAndSend(2, packet, args);
+    processAndSend(2, packet, args, samsaaraOwner);
   };
 
-  function processAndSend(offset, packet, args){
+  function processAndSend(offset, packet, args, owner){
     if(args.length > offset){
       packet.args = [];
       for(var i = offset; i < args.length-1; i++){
         packet.args.push(args[i]);
       }
       if(typeof args[args.length-1] === "function"){
-        send(packet, args[args.length-1]);
+        send(packet, owner, args[args.length-1]);
       }
       else{
         packet.args.push(args[args.length-1]);
-        send(packet);
+        send(packet, owner);
       }
     }
     else{
-      send(packet);
+      send(packet, owner);
     }
   }
 
-  var send = samsaara.send = function(packet, callBack){
+  var send = samsaara.send = function(packetJSON, owner, callBack){
 
-    var packetJSON = packet;
-
-    if(callBack !== undefined && typeof callBack === "function"){
+    if(typeof callBack === "function"){
       var callBackID = makeIdAlpha(12);
       incomingCallBacks[callBackID] = {callBack: callBack};
       packetJSON.callBack = callBackID;
@@ -131,7 +130,9 @@ var samsaara = (function(samsaara){
 
     if(preinitialized === true){
       packetJSON.token = samsaaraToken;
-      sockjs.send( JSON.stringify(packetJSON) );
+      // if(packetJSON.owner !== undefined && packetJSON.owner !== samsaaraOwner)
+      sockjs.send( JSON.stringify([owner, packetJSON]) );
+      // console.log("SENDING", JSON.stringify([owner, packetJSON]));
     }
     else{
       functionQueue.push( packetJSON );
@@ -161,30 +162,29 @@ var samsaara = (function(samsaara){
 
       if(options && options.session){
         // console.log("*******************ATTEMPTING TO LOG IN SESSION");
-        send({internal: "requestRegistrationToken"}, function (err, registrationToken){
+        send({internal: "requestRegistrationToken"}, samsaaraOwner, function (err, registrationToken){
           httpGet("/registerSamsaaraConnection?regtoken=" + registrationToken, function (sessionInfo){
             var sessionInfoParsed = JSON.parse(sessionInfo);
             if(sessionInfo.err === undefined){
               navInfo.sessionInfo = {sessionID: sessionInfoParsed.sessionID, userID: sessionInfoParsed.userID};
-              sockjs.send( JSON.stringify( { login: [registrationToken, sessionInfo] } ));
+              sockjs.send( JSON.stringify( [samsaaraOwner, {login: [registrationToken, sessionInfo]}] ));
             }
           });
         });
       }
-
-      sockjs.send( JSON.stringify( { opts: remoteOptions } ));
+      
     };
 
     sockjs.onmessage = function(e){
-      var messageObj = {};
+      var messageParsed = {};
       try{
-        messageObj = JSON.parse(e.data);   
+        messageParsed = JSON.parse(e.data);   
         console.log("INCOMING MESSAGE", e.data);
       }
       catch(err){
         console.log(err);
       }
-      evalMessage(messageObj);
+      evalMessage(messageParsed);
     };
 
     sockjs.onclose = function(e){
@@ -204,13 +204,21 @@ var samsaara = (function(samsaara){
     sockjs.send('H');
   };
 
-  var evalMessage = function (messageObj){
+  var evalMessage = function (messageParsed){
+
+    var messageObj = messageParsed[1];
+    messageObj.owner = messageParsed[0];
+
 
     if(messageObj.samsaaraID !== undefined){
       samsaaraID = messageObj.samsaaraID;
       console.log("CONNECTED AS:" + samsaaraID);
     }
-
+    if(messageObj.samsaaraOwner !== undefined){
+      samsaaraOwner = messageObj.samsaaraOwner;
+      sockjs.send( JSON.stringify( [samsaaraOwner, {opts: remoteOptions}] ));
+      console.log("samsaaraOwner:" + samsaaraOwner);
+    }
     if(messageObj.samsaaraToken !== undefined){
       preinitializeWithToken(messageObj.samsaaraToken);
     }
@@ -222,7 +230,7 @@ var samsaara = (function(samsaara){
       else{
         console.log("Samsaara Error:", messageObj.func, "Is not a valid property of this Samsaara Object", messageObj);
         if(messageObj.callBack){
-          send({internal: "callItBackError", args: [messageObj.callBack, messageObj.owner, ["ERROR: Invalid Object on Client"]] } );
+          send({internal: "callItBackError", args: [messageObj.callBack, messageObj.owner, ["ERROR: Invalid Object on Client"]]}, messageObj.owner);
         }
       }
     }
@@ -245,7 +253,7 @@ var samsaara = (function(samsaara){
       preinitialized = true;
       if(functionQueue.length > 0){
         for(var i=0; i < functionQueue.length; i++){
-          send( functionQueue[i] );
+          send( functionQueue[i], samsaaraOwner);
         }
         functionQueue = [];
       }
@@ -269,7 +277,15 @@ var samsaara = (function(samsaara){
   function createCallBack(id, owner){
     var theCallBack = function(){
       var args = Array.prototype.slice.call(arguments);
-      send({internal: "callItBack", args: [id, owner, args] } );
+      if(typeof args[args.length-1] === "function"){
+        theCallBack = args.pop();
+        processAndSend(0, {ns:"internal", func:"callItBack"}, [id, owner, args, theCallBack], owner);
+      }
+      else{
+        processAndSend(0, {ns:"internal", func:"callItBack"}, [id, owner, args], owner);
+      }
+      
+      // send({internal: "callItBack", args: [id, owner, args] } );
       delete outgoingCallBacks[id];
     };
     return theCallBack;
@@ -327,9 +343,9 @@ var samsaara = (function(samsaara){
     if(typeof callBack === "function") callBack(window.innerWidth, window.innerHeight);
   };
 
-  internalMethods.samsaaraInitialized = function(whichOne, callBack){
+  internalMethods.samsaaraInitialized = function(initialized, callBack){
     samsaara.emitEvent("initialized");
-    if(typeof callBack === "function") callBack(whichOne);
+    if(typeof callBack === "function") callBack(true);
   };
 
   internalMethods.updateToken = function(oldToken, newToken, callBack){

@@ -65,8 +65,28 @@ function Connection(conn, connID){
   this.foreignContext = null;
   this.owner = process.pid;
 
+  this.routes = [];
+
 }
 
+Connection.prototype.addNewRoute = function(routeName){
+  var i = 0;
+  var routes = this.routes;
+  while(routes[i] === undefined || routes[i] === null){
+
+  }
+  return routeID.toString(36);
+};
+
+Connection.prototype.getRoute = function(routeID){
+  routeID = parseInt(routeID, 10);
+  return this.routes[routeID];
+};
+
+Connection.prototype.removeRoute = function(routeID){
+  routeID = parseInt(routeID, 10);
+  this.routes[routeID] = undefined;
+};
 
 Connection.prototype.write = function(message){
   // console.log(process.pid.toString(), "NATIVE write on", "NATIVE CONNECTION WRITING");

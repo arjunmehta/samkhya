@@ -11,7 +11,7 @@ var helper = require('./lib/helper.js');
 var EventEmitter = require('events').EventEmitter;
 util.inherits(Samsaara, EventEmitter);
 
-var samsaara = new Samsaara();
+exports = module.exports = new Samsaara();
 
 function Samsaara(){
 
@@ -163,11 +163,4 @@ function Samsaara(){
   };
 
 }
-
-exports = module.exports = samsaara;
-
-// Samsaara.prototype = Object.create(EventEmitter.prototype);
-
-
-
 
