@@ -36,14 +36,13 @@ exports = module.exports = Connection;
 
 function Connection(conn){
 
-  var currentID = conn.id;
   var connection = this;
 
-  this.id = currentID;
+  this.id = conn.id;
   this.conn = conn;
 
   this.userID = 'anonymous' + helper.makeIdAlphaNumerical(5);
-  this.key = helper.makeIdAlphaNumerical(20) + currentID;
+  this.key = helper.makeIdAlphaNumerical(20) + conn.id;
 
   this.token = helper.makeUniqueHash('sha1', this.key, [this.userID]);
 
@@ -93,7 +92,7 @@ function Connection(conn){
   });
 
   conn.write(JSON.stringify([config.uuid,{
-    samsaaraID: currentID, 
+    samsaaraID: conn.id, 
     samsaaraToken: connection.token, 
     samsaaraOwner: config.uuid
   }]));
@@ -186,26 +185,26 @@ Connection.prototype.closeConnection = function(message){
 
 
 
-Connection.prototype.addNewRoute = function(routeName){
-  var i = 0;
-  var routes = this.routes;
-  while(routes[i] === undefined || routes[i] === null){
+// Connection.prototype.addNewRoute = function(routeName){
+//   var i = 0;
+//   var routes = this.routes;
+//   while(routes[i] === undefined || routes[i] === null){
 
-  }
-  return routeID.toString(36);
-};
-
-
-Connection.prototype.getRoute = function(routeID){
-  routeID = parseInt(routeID, 10);
-  return this.routes[routeID];
-};
+//   }
+//   return routeID.toString(36);
+// };
 
 
-Connection.prototype.removeRoute = function(routeID){
-  routeID = parseInt(routeID, 10);
-  this.routes[routeID] = undefined;
-};
+// Connection.prototype.getRoute = function(routeID){
+//   routeID = parseInt(routeID, 10);
+//   return this.routes[routeID];
+// };
+
+
+// Connection.prototype.removeRoute = function(routeID){
+//   routeID = parseInt(routeID, 10);
+//   this.routes[routeID] = undefined;
+// };
 
 Connection.prototype.write = function(message){
   // console.log(process.pid.toString(), "NATIVE write on", "NATIVE CONNECTION WRITING");

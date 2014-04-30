@@ -84,6 +84,19 @@ var samsaara = (function(samsaara){
     }
   };
 
+  samsaara.use = function(module){
+
+    // console.log("Trying to use", module);
+
+    for(var methodName in module.internalMethods){
+
+      console.log("Trying to use:", methodName);
+      if(!internalMethods[methodName]){
+        internalMethods[methodName] = module.internalMethods[methodName];
+      }
+    }
+  };
+
 
   /**
    * Private/Public Methods
@@ -137,7 +150,7 @@ var samsaara = (function(samsaara){
       packetJSON.token = samsaaraToken;
       // if(packetJSON.owner !== undefined && packetJSON.owner !== samsaaraOwner)
       sockjs.send( JSON.stringify([owner, packetJSON]) );
-      console.log("SENDING", JSON.stringify([owner, packetJSON]));
+      // console.log("SENDING", JSON.stringify([owner, packetJSON]));
     }
     else{
       functionQueue.push( packetJSON );
@@ -184,7 +197,7 @@ var samsaara = (function(samsaara){
       var messageParsed = {};
       try{
         messageParsed = JSON.parse(e.data);   
-        console.log("INCOMING MESSAGE", e.data);
+        // console.log("INCOMING MESSAGE", e.data);
       }
       catch(err){
         console.log(err);
@@ -245,7 +258,7 @@ var samsaara = (function(samsaara){
         execute(internalMethods[messageObj.internal], messageObj);
       }
       else{
-        console.log("Samsaara Error:", messageObj.func, "Is not a valid property of this Samsaara Object");
+        console.log("Samsaara Error:", messageObj.internal, "Is not a valid property of this Samsaara Object");
       }
     }
   };
@@ -312,42 +325,6 @@ var samsaara = (function(samsaara){
     console.log("ARGYLE SERVER ERROR:", code, message);
   };
 
-  internalMethods.testTime = function(stopTime, serverTime, callBack){
-    var serverOffset = serverTime - stopTime;
-    var theTime = getCurrentTime();
-    var errorDifference = theTime - serverOffset;
-
-    if(typeof callBack === "function") callBack(serverTime, theTime, errorDifference);
-  };
-
-  internalMethods.updateOffset = function(timeOffset){
-    console.log("Samsaara: updateOffset():", timeOffset);
-    navInfo.timeOffset = timeOffset;
-  };
-
-  internalMethods.getNavInfo = function(callBack){
-    if(typeof callBack === "function") callBack( navInfo );
-  };
-
-  internalMethods.addToGroups = function(callBack){
-    if(typeof callBack === "function") callBack( options.groups );
-  };
-
-  internalMethods.getGeoLocation = function(callBack){
-    if (navigator.geolocation){
-      navigator.geolocation.getCurrentPosition(function (position){
-        navInfo.geoposition = position;
-        if(typeof callBack === "function") callBack(null, navInfo.geoposition);
-      }, function(err){
-        if(typeof callBack === "function") callBack(err, null);
-      });
-    }
-  };
-
-  internalMethods.getWindowSize = function(callBack){
-    if(typeof callBack === "function") callBack(window.innerWidth, window.innerHeight);
-  };
-
   internalMethods.samsaaraInitialized = function(initialized, callBack){
     samsaara.emitEvent("initialized");
     if(typeof callBack === "function") callBack(true);
@@ -370,11 +347,6 @@ var samsaara = (function(samsaara){
   /**
    * Helper Methods
    **/
-
-  function getCurrentTime(){
-    var currentTime = new Date().getTime();
-    return currentTime;
-  }
 
   function makeIdAlpha(idLength){
     var text = "";
@@ -520,7 +492,109 @@ var samsaara = (function(samsaara){
 }(this.samsaara = this.samsaara || {}));
 
 
+var testTime = (function(module){
 
+  module.internalMethods = {
+    testTime: function(stopTime, serverTime, callBack){
+      var serverOffset = serverTime - stopTime;
+      var theTime = new Date().getTime();
+      var errorDifference = theTime - serverOffset;
+
+      if(typeof callBack === "function") callBack(serverTime, theTime, errorDifference);
+    },
+    updateOffset: function (timeOffset){
+      console.log("Samsaara: updateOffset():", timeOffset);
+      samsaara.timeOffset = timeOffset;
+    }
+  };
+
+  module.initializationMethods = {};
+  module.closeMethods = {};
+
+  return module;
+
+}(this.testTime = this.testTime || {}));
+
+
+
+var navInfo = (function(module){
+
+  module.internalMethods = {
+    getNavInfo: function(callBack){
+      if(typeof callBack === "function") callBack( {empty: 0} );
+    }
+  };
+
+  module.initializationMethods = {};
+  module.closeMethods = {};
+
+  return module;
+
+}(this.navInfo = this.navInfo || {}));
+
+var groups = (function(module){
+
+  module.internalMethods = {
+    addToGroups: function(callBack){
+      if(typeof callBack === "function") callBack( options.groups );
+    }
+  };
+
+  module.initializationMethods = {};
+  module.closeMethods = {};
+
+  return module;
+
+}(this.groups = this.groups || {}));
+
+
+var geoLocation = (function(module){
+
+  module.internalMethods = {
+
+    getGeoLocation: function(callBack){
+      if (navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(function (position){
+          samsaara.geoposition = position;
+          if(typeof callBack === "function") callBack(null, position);
+        }, function(err){
+          if(typeof callBack === "function") callBack(err, null);
+        });
+      }
+    }
+
+  };
+
+  module.initializationMethods = {};
+  module.closeMethods = {};
+
+  return module;
+
+}(this.geoLocation = this.geoLocation || {}));
+
+
+var windowSize = (function(module){
+
+  module.internalMethods = {
+    getWindowSize: function(callBack){
+      if(typeof callBack === "function") callBack(window.innerWidth, window.innerHeight);
+    }
+  };
+
+  module.initializationMethods = {};
+  module.closeMethods = {};
+
+  return module;
+
+}(this.windowSize = this.windowSize || {}));
+
+console.log("windowSize", windowSize);
+
+samsaara.use(windowSize);
+samsaara.use(geoLocation);
+samsaara.use(testTime);
+samsaara.use(navInfo);
+samsaara.use(groups);
 
 
 function getScreenInfo(){
