@@ -73,9 +73,14 @@ var samsaara = (function(samsaara){
   };
 
   samsaara.expose = function(set){
-
     for(var func in set){
       exposedMethods[func] = set[func];
+    }
+  };
+
+  samsaara.addInternalMethod = function(name, func){
+    if(!internalMethods[name]){
+      internalMethods[name] = func;
     }
   };
 
@@ -120,7 +125,7 @@ var samsaara = (function(samsaara){
     }
   }
 
-  var send = samsaara.send = function(packetJSON, owner, callBack){
+  var send = function(packetJSON, owner, callBack){
 
     if(typeof callBack === "function"){
       var callBackID = makeIdAlpha(12);
@@ -132,14 +137,14 @@ var samsaara = (function(samsaara){
       packetJSON.token = samsaaraToken;
       // if(packetJSON.owner !== undefined && packetJSON.owner !== samsaaraOwner)
       sockjs.send( JSON.stringify([owner, packetJSON]) );
-      // console.log("SENDING", JSON.stringify([owner, packetJSON]));
+      console.log("SENDING", JSON.stringify([owner, packetJSON]));
     }
     else{
       functionQueue.push( packetJSON );
     }
   };
 
-  var nsSend = samsaara.nsSend = function(ns, packet, callBack){
+  var nsSend = function(ns, packet, callBack){
     packet.ns = ns;
     send(packet, callBack);
   };

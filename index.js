@@ -85,6 +85,10 @@ function Samsaara(){
     switchContext: contextController.switchContext
   };
   
+  this.use = function(middleware){
+
+  };
+
   this.initialize = function (server, app, opts){
 
     if(opts){
@@ -161,6 +165,7 @@ function Samsaara(){
       connectionController.createNewConnection(conn);
     });
   };
+
 
 }
 
