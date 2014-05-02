@@ -6,33 +6,27 @@
 
 // var memwatch = require('memwatch');
 
+
+
 var helper = require('../lib/helper');
 
 var path = require("path");
 var log = require("../lib/log");
 var moduleName = path.basename(module.filename);
 
+var samsaara = require('../index.js');
+
 var config = require('../lib/config');
 var authentication = require('../lib/authentication');
 var communication = require('../lib/communication');
-var grouping = require('../lib/grouping');
 
 var connections = require('../lib/connectionController').connections;
 var router = require('../lib/communication').router;
 var contexts = require('../lib/contextController').contexts;
-var groups = grouping.groups;
-
 
 var timeAccuracy = 7;
-// var moduleExtensions = require('../lib/extension');
-
-// for(var Extension in moduleExtensions.Connection){
-//   util.inherits(Connection, moduleExtensions.Connection[Extension]);
-// }
-
 
 exports = module.exports = Connection;
-
 
 function Connection(conn){
 
@@ -97,7 +91,9 @@ function Connection(conn){
     samsaaraOwner: config.uuid
   }]));
 
-  config.emit("connect", this);
+  // console.log("CONNECTION INSTANCE OF SAMSAARA", samsaara);
+  samsaara.emit("connect", this);
+
 
   if(config.redisStore === true){
     this.subscribeRedis();
@@ -119,6 +115,10 @@ function Connection(conn){
 // };
 
 
+Connection.prototype.initializationMethods = [];
+Connection.prototype.closingMethods = [];
+
+
 Connection.prototype.initialize = function(opts){
 
   console.log("TRYING TO INITIALIZE CONNECTION", this.id);
@@ -127,8 +127,8 @@ Connection.prototype.initialize = function(opts){
   var ia = this.initializeAttributes;
   
   if(opts !== undefined){
-    for(var extension in initializationMethods){
-      initializationMethods[extension](opts, connection, ia);
+    for(var i=0; i < this.initializationMethods.length; i++){
+      this.initializationMethods[i](opts, connection, ia);
     }
   }
   else{
@@ -140,7 +140,7 @@ Connection.prototype.completeInitialization = function(){
   if(this.initialized === false){
     communication.sendToClient(this.id, {internal: "samsaaraInitialized", args: [true]}, function (confirmation){
       this.initialized = true;
-      config.emit('initialized', this);
+      samsaara.emit('initialized', this);
     });
   }
 };
@@ -150,28 +150,34 @@ Connection.prototype.closeConnection = function(message){
   ////////
 
   var connID = this.id;
-  var connContext = this.context;
+  // var connContext = this.context;
   
-  config.emit("disconnect", this);
+  samsaara.emit("disconnect", this);
 
-  authentication.removeConnectionSession(connID);
+  // authentication.removeConnectionSession(connID);
 
-  if(connContext !== null && contexts[connContext] !== undefined){
-    contexts[connContext].removeConnection(connID);
+  // if(connContext !== null && contexts[connContext] !== undefined){
+  //   contexts[connContext].removeConnection(connID);
+  // }
+
+  // for(var key in groups){
+  //   if(groups[key][connID] !== undefined){
+  //     delete groups[key][connID];
+  //   }
+  // }
+
+  if(config.redisStore === true){
+    this.unsubscribeRedis();
   }
 
-  for(var key in groups){
-    if(groups[key][connID] !== undefined){
-      delete groups[key][connID];
-    }
+  for(var i=0; i < this.closingMethods.length; i++){
+    this.closingMethods[i](this);
   }
 
   this.conn.removeAllListeners();
   delete connections[connID];
 
-  if(config.redisStore === true){
-    this.unsubscribeRedis();
-  }
+
 
   log.warn(" ", config.uuid, moduleName, "CLOSING: ", connID, message);
 
@@ -280,7 +286,7 @@ InitializedAttributes.prototype.force = function(attribute){
 
 InitializedAttributes.prototype.initialized = function(err, attribute){
 
-  // console.log("////////////////////////////////InitializedAttributes", attribute, this.forced);
+  console.log("////////////////////////////////InitializedAttributes", attribute, this.forced);
 
   if(err) console.log(err);
 
@@ -306,11 +312,14 @@ InitializedAttributes.prototype.allInitialized = function(){
 
 var initializationMethods = {
   navInfo: navInfoInitOptions,
-  groups: groupingInitOptions,
   timeOffset: timeOffsetInitOptions,
   geoLocation: geoLocationInitOptions,
   windowSize: windowSizeInitOptions
 };
+
+for(var ext in initializationMethods){
+  Connection.prototype.initializationMethods.push(initializationMethods[ext]);
+}
 
 function navInfoInitOptions(opts, connection, attributes){
 
@@ -329,17 +338,6 @@ function navInfoInitOptions(opts, connection, attributes){
     attributes.initialized(null, "navInfo");
   });
 
-}
-
-function groupingInitOptions(opts, connection, attributes){
-  if(opts.groups !== undefined){
-    console.log("Initializing Grouping...", opts.groups, connection.id);
-    attributes.force("grouping");
-    opts.groups.push('everyone');
-    grouping.addToGroup(connection.id, opts.groups, function (addedGroups){
-      attributes.initialized(null, "grouping");
-    });
-  }
 }
 
 function timeOffsetInitOptions(opts, connection, attributes){
@@ -435,10 +433,10 @@ function windowResize(width, height, windowOffsetX, windowOffsetY){
   this.navInfo.windowHeight = height;
 
   if(windowOffsetX){
-    config.emit('windowSize', this, width, height, windowOffsetX, windowOffsetY);
+    samsaara.emit('windowSize', this, width, height, windowOffsetX, windowOffsetY);
   }
   else{
-    config.emit('windowSize', this, width, height);
+    samsaara.emit('windowSize', this, width, height);
   }
 }
 
@@ -448,7 +446,7 @@ function geoPosition(err, geoposition){
   if(this.navInfo !== undefined){
     this.navInfo.geoposition = geoposition;
     this.initializeAttributes.initialized(err, "geoLocation");
-    config.emit('geoPosition', this, err, geoposition);
+    samsaara.emit('geoPosition', this, err, geoposition);
   }
   else{
     this.initializeAttributes.initialized(new Error("GeoLocation did not work"), "geoLocation");

@@ -70,7 +70,7 @@ if(config.redisStore === true){
   initOffset = 1000;
 
   subscribe = function(callBackID){
-    redisSub.psubscribe("CB:"+callBackID+"*");
+    // redisSub.psubscribe("CB:"+callBackID+"*");
   };
 
   totalInit = function(remote){
@@ -84,7 +84,7 @@ if(config.redisStore === true){
 
   destroy = function(callBackID){
     delete incomingCallBacks[callBackID];
-    redisSub.punsubscribe("CB:"+callBackID+"*");
+    // redisSub.punsubscribe("CB:"+callBackID+"*");
   };
 }
 else{

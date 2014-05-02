@@ -4,37 +4,52 @@
  * MIT Licensed
  */
 
-var util = require('util');
 var log = require("./lib/log.js");
 var helper = require('./lib/helper.js');
 
 var EventEmitter = require('events').EventEmitter;
-util.inherits(Samsaara, EventEmitter);
 
-exports = module.exports = new Samsaara();
+var samsaara = new EventEmitter();
 
-function Samsaara(){
+exports = module.exports = samsaara;
 
-  EventEmitter.call(this);
+samsaara = (function Samsaara(module){
+ 
+  var config = module.config = require('./lib/config.js');
 
-  var config = require('./lib/config.js');
-  config.emit = emitter(this);
-
-  function emitter(samsaara){
-    return function(){
-      samsaara.emit.apply(samsaara, arguments);
-    };
-  }
+  // EventEmitter.call(module);  
+  // config.emit = emitter(module);
+  // function emitter(samsaara){
+  //   return function(){
+  //     samsaara.emit.apply(samsaara, arguments);
+  //   };
+  // }
 
   var sockjs = require('sockjs');  
   var sockjsOpts = { _pathTo: "/echo" };
   var sockjsServer = sockjs.createServer();
 
-  var connectionController = require('./lib/connectionController.js');
-  var communication = require('./lib/communication.js');
+  var connectionController = module.connectionController = require('./lib/connectionController.js');  
+  var communication = module.communication = require('./lib/communication.js');
+
   var authentication = require('./lib/authentication.js');
-  var contextController = require('./lib/contextController.js'); 
-  var grouping = require('./lib/grouping.js');
+  var contextController = require('./lib/contextController.js');
+
+  connectionController.setModels();
+
+  module.ipc = {
+    addIPCRoute : function(route, func){
+      // console.log(route, func);
+    },
+    publish: {},
+    subscribe: {},
+    unsubscribe: {},
+    subscribePattern: {},
+    unsubscribePattern: {},
+    routes: {}
+  };
+
+  var stack = [];
 
   var bringToMain = {
 
@@ -46,13 +61,13 @@ function Samsaara(){
     expose: communication.expose,
     exposeNamespace: communication.exposeNamespace,
 
-    contexts: contextController.contexts,
-    openContext: contextController.openContext,
-    openContextWithData: contextController.openContextWithData,
-    isContextOpen: contextController.isContextOpen,
-    switchContext: contextController.switchContext,
-    linkContext: contextController.linkContext,
-    clearFromContext: contextController.clearFromContext,
+    // contexts: contextController.contexts,
+    // openContext: contextController.openContext,
+    // openContextWithData: contextController.openContextWithData,
+    // isContextOpen: contextController.isContextOpen,
+    // switchContext: contextController.switchContext,
+    // linkContext: contextController.linkContext,
+    // clearFromContext: contextController.clearFromContext,
 
     addUserSession: authentication.addUserSession,
     removeUserSession: authentication.removeUserSession,
@@ -61,19 +76,13 @@ function Samsaara(){
     Access: contextController.Access,
     Connection: connectionController.Connection,
 
-    groups: grouping.groups,
-    createGroup: grouping.createGroup,
-    inGroup: grouping.inGroup,
-    addToGroup: grouping.addToGroup,
-    removeFromGroup: grouping.removeFromGroup
-
   };
 
   for(var func in bringToMain){
-    this[func] = bringToMain[func];
+    module[func] = bringToMain[func];
   }
 
-  this.nameSpaces.internal = {
+  module.nameSpaces.internal = {
     windowResize: connectionController.windowResize,
     geoPosition: connectionController.geoPosition,
     callItBack: communication.callItBack,
@@ -81,15 +90,16 @@ function Samsaara(){
     requestRegistrationToken: authentication.requestRegistrationToken
   };
 
-  this.nameSpaces.samsaara = {
+  module.nameSpaces.samsaara = {
     switchContext: contextController.switchContext
   };
   
-  this.use = function(middleware){
-
+  module.use = function(middleware){
+    // console.log("NEW MIDDLEWARE", middleware);
+    stack.push(middleware);
   };
 
-  this.initialize = function (server, app, opts){
+  module.initialize = function (server, app, opts){
 
     if(opts){
 
@@ -109,7 +119,7 @@ function Samsaara(){
           });
         }
         else{
-          throw "RedisClient for redisPub, redisSub and redisClient must be provided in order for samsaara to work using Redis.";
+          throw new Error("RedisClient for redisPub, redisSub and redisClient must be provided in order for samsaara to work using Redis.");
         }
       }
 
@@ -118,8 +128,14 @@ function Samsaara(){
       communication.setRedisStore();
 
       for(var func in authentication.exported){
-        this[func] = authentication.exported[func];
+        module[func] = authentication.exported[func];
       }
+
+      console.log("MIDDLE WARE STACK ", JSON.stringify(stack));
+
+      for (var i = 0; i < stack.length; i++) {
+        initializeMiddleware(stack[i]);
+      }      
 
       if(app){
 
@@ -141,7 +157,7 @@ function Samsaara(){
 
           authentication.retrieveRegistrationToken(registrationToken, function (err, reply){
             if(err === null){
-              // Can this somehow be supplied by the developer?
+              // Can module somehow be supplied by the developer?
               authentication.getRequestSessionInfo(req.sessionID, function (sessionID, userID){              
                 var keyObject = { sessionID: sessionID, userID: userID, tokenKey: reply };
                 res.send(keyObject);
@@ -154,18 +170,70 @@ function Samsaara(){
         });
       }
       else{
-        throw "You must provide an Express app object so Samsaara can attach its authentication route";
+        throw new Error("You must provide an Express app object so Samsaara can attach its authentication route");
       }
     }
 
-    grouping.createGroup("everyone");
-
     sockjsServer.installHandlers( server, { prefix: sockjsOpts._pathTo } );
+
     sockjsServer.on('connection', function (conn){
       connectionController.createNewConnection(conn);
     });
+
   };
 
 
-}
+  function initializeMiddleware(middleware){
+
+    var moduleObject = middleware(module);
+    var objName;
+
+    if(moduleObject.name){
+      if(!module[moduleObject.name]){
+        module[moduleObject.name] = {};
+      }
+    }
+
+    if(moduleObject.foundation){
+      for(objName in moduleObject.foundation){
+        if(!module[objName]){
+          console.log("INITIALIZING foundation method", objName);
+          if(moduleObject.name){
+            module[moduleObject.name][objName] = moduleObject.foundation[objName];
+          }
+          module[objName] = moduleObject.foundation[objName];
+        }
+        else{
+          throw new Error("Foundation method: " + objName + " is already an internal method on samsaara");
+        }        
+      }
+    }
+
+    if(moduleObject.remoteMethods){
+      if(!module.nameSpaces.internal[objName]){
+        for(objName in moduleObject.remoteMethods){
+          module.nameSpaces.internal[objName] = moduleObject.remoteMethods[objName];
+        }
+      }
+      else{
+        throw new Error("Remote method: " + objName + " is already an internal method on samsaara");
+      }
+    }
+
+    if(moduleObject.connectionInitialization){
+      // console.log("connectionController", connectionController);
+      for(objName in moduleObject.connectionInitialization){
+        connectionController.Connection.prototype.initializationMethods.push(moduleObject.connectionInitialization[objName]);
+      }
+    }
+
+    if(moduleObject.connectionClose){
+      for(objName in moduleObject.connectionClose){
+        connectionController.Connection.prototype.closingMethods.push(moduleObject.connectionClose[objName]);
+      }
+    }
+  }
+
+})(samsaara);
+
 

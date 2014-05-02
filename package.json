@@ -1,5 +1,6 @@
 {
   "name": "samsaara",
+  "private": true,
   "version": "0.0.2",
   "description": "A comprehensive module to create, maintain and manage active socket connections.",
   "keywords": [
