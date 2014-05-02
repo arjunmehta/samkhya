@@ -82,7 +82,7 @@ function Connection(conn){
   });
 
   conn.on('data', function (message){
-    router(connections[connection.id], message);
+    connection.handleMessage(message);
   });
 
   conn.write(JSON.stringify([config.uuid,{
@@ -94,28 +94,140 @@ function Connection(conn){
   // console.log("CONNECTION INSTANCE OF SAMSAARA", samsaara);
   samsaara.emit("connect", this);
 
-
   if(config.redisStore === true){
     this.subscribeRedis();
   }
 
 }
 
+Connection.prototype.handleMessage = function(message){
+  if(message === 'H'){
+    console.log("Heartbeat...", this.id);
+    this.lastHeartBeat = new Date().getTime();
+  }
+  else{
+    this.routeMessage(message);
+  }
+};
 
+Connection.prototype.routeMessage = function(message){
+  this.preprocessMessage(message);
+};
 
-// var extensionFunctions = {
-//   connect: {
-//     grouping: function(samsaaraConnection){
-//       grouping.addSamsaaraConnection(samsaaraConnection);
+Connection.prototype.preprocessMessage = function(message){
+  var parsedMessage;
+    try{
+       parsedMessage = JSON.parse(message);    
+    }
+    catch(e){
+      log.error("MESSAGE ERROR: INVALID JSON", message, e);
+    }
+  this.filterMessage(parsedMessage[1]);
+};
+
+// Connection.prototype.router = function(message){
+//   if(message === 'H'){
+//     // console.log("Heartbeat...", whichOne.id);
+//     this.lastHeartBeat = new Date().getTime();
+//   }
+//   else{
+//     var route = message.substr(2,8);
+//     // console.log(config.uuid, "MESSAGE ROUTE", route);
+//     if(route === config.uuid){
+//       parseAndReceiveSub(whichOne, message);
 //     }
-//   },
-//   close: {
+//     else{
+//       console.log("TRYING TO ROUTE MESSAGE TO", "PRC:"+route+":RCV:"+whichOne.id);
+//       ipc.sendToProcess(route, whichOne.id+":"+whichOne.token+"::"+message);
+//     }
+//   }
+// };
 
+Connection.prototype.messageHandlers = [];
+
+Connection.prototype.filterMessage = function (messageObj){
+
+  var connection = this;
+  var handlersLength = connection.messageHandlers.length;
+
+  if(handlersLength > 0){
+    var i = 0;
+    next();
+  }
+  else{
+    connection.receiveMessage(messageObj);
+  }
+
+  function next(err){
+    if(err){
+      console.log("Message Acceptance Error", err);
+    }
+    else if(i < handlersLength){
+      connection.messageHandlers[i](connection, messageObj, next);
+      i++;
+    }   
+    else{
+      connection.receiveMessage(messageObj);
+    }
+  }
+
+};
+
+
+// authentication.filterMessage = function(connection, messageObj, next){
+//   if(connection.token === messageObj.token || connection.oldToken === messageObj.token){
+//     next();
+//   }
+//   else{
+//     next(new Error("Invalid Authentication Token for connection"));
 //   }  
 // };
 
+// ipc.routeMessage = function(connection, messageObj, next){
+//   next();
+// };
+
+
+Connection.prototype.receiveMessage = function (messageObj, token){
+
+  // var tokenMatch;
+
+  // if(token === undefined){
+  //   tokenMatch = (this.token === messageObj.token) || (this.oldToken === messageObj.token);
+  // }
+  // else{
+  //   tokenMatch = (token === messageObj.token);
+  // }
+
+  // if(this.id !== undefined && tokenMatch === true){
+    
+    // console.log("INCOMING MESSAGE RECEIVED", messageObj);
+
+    messageObj.sender = this.id;
+
+    if(messageObj.func !== undefined){
+      communication.executeFunction(this, messageObj);
+    }
+    else if(messageObj.internal !== undefined){
+      messageObj.ns = "internal";
+      messageObj.func = messageObj.internal;
+      communication.executeFunction(this, messageObj);
+    }
+    else if(messageObj.opts !== undefined){
+      log.info(process.pid, moduleName, messageObj.opts);
+      this.initialize(messageObj.opts);
+    }
+    else if(messageObj.login !== undefined){
+      loginConnection(this, messageObj);
+    }
+
+
+};
+
 
 Connection.prototype.initializationMethods = [];
+
+
 Connection.prototype.closingMethods = [];
 
 
@@ -123,18 +235,17 @@ Connection.prototype.initialize = function(opts){
 
   console.log("TRYING TO INITIALIZE CONNECTION", this.id);
 
+  opts = opts || {};
+
   var connection = this;
   var ia = this.initializeAttributes;
   
-  if(opts !== undefined){
-    for(var i=0; i < this.initializationMethods.length; i++){
-      this.initializationMethods[i](opts, connection, ia);
-    }
+  for(var i=0; i < this.initializationMethods.length; i++){
+    this.initializationMethods[i](opts, connection, ia);
   }
-  else{
-    this.completeInitialization();
-  }  
+
 };
+
 
 Connection.prototype.completeInitialization = function(){
   if(this.initialized === false){
@@ -144,6 +255,7 @@ Connection.prototype.completeInitialization = function(){
     });
   }
 };
+
 
 Connection.prototype.closeConnection = function(message){
   // var hd = new memwatch.HeapDiff();
@@ -166,9 +278,9 @@ Connection.prototype.closeConnection = function(message){
   //   }
   // }
 
-  if(config.redisStore === true){
-    this.unsubscribeRedis();
-  }
+  // if(config.redisStore === true){
+  //   this.unsubscribeRedis();
+  // }
 
   for(var i=0; i < this.closingMethods.length; i++){
     this.closingMethods[i](this);

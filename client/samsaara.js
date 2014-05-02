@@ -196,8 +196,8 @@ var samsaara = (function(samsaara){
     sockjs.onmessage = function(e){
       var messageParsed = {};
       try{
-        messageParsed = JSON.parse(e.data);   
-        // console.log("INCOMING MESSAGE", e.data);
+        console.log("INCOMING MESSAGE", e.data);
+        messageParsed = JSON.parse(e.data);           
       }
       catch(err){
         console.log(err);

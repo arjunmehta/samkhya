@@ -9,21 +9,19 @@ exports = module.exports = IncomingCallBack;
 var helper = require('../lib/helper.js');
 var config = require('../lib/config.js');
 
-var redisSub = config.redisSub;
 var incomingCallBacks = require('../lib/communication.js').incomingCallBacks;
 
-var destroy, totalInit, subscribe, initOffset = 0;
+var initOffset = 1000;
 
-function IncomingCallBack(theCallBack, callBackID, remote){
+function IncomingCallBack(theCallBack, callBackID, processes){
   this.callBackID = callBackID;
   this.callBack = theCallBack;
   this.owner = process.pid;
   this.list = {};
   this.expiry = new Date().getTime()+3600000;
-  this.total = totalInit(remote);
-
-  subscribe(callBackID);
+  this.total = totalInit(processes);
 }
+
 
 IncomingCallBack.prototype.addConnections = function(connArray){
   for(var i=0; i<connArray.length; i++){
@@ -32,11 +30,13 @@ IncomingCallBack.prototype.addConnections = function(connArray){
   this.total += connArray.length - initOffset;
 };
 
+
 IncomingCallBack.prototype.addConnection = function(connID){
   // console.log("ADDING WAITING CALLBACK CONNECTION", connID);
   this.list[connID] = true;
   this.total++;
 };
+
 
 IncomingCallBack.prototype.executeCallBack = function(conn, args){
   if(this.list[conn.id] !== undefined){
@@ -48,6 +48,7 @@ IncomingCallBack.prototype.executeCallBack = function(conn, args){
   }
 };
 
+
 IncomingCallBack.prototype.callBackError = function(conn, args){
   if(this.list[conn.id] !== undefined){
     // console.log("CallBack Error", this.callBackID, args);
@@ -57,46 +58,27 @@ IncomingCallBack.prototype.callBackError = function(conn, args){
   }
 };
 
+
 IncomingCallBack.prototype.evaluateDestroy = function(){
   if(this.total <= 0){
     // console.log("Deleting CallBack", this.callBackID);
-    destroy(this.callBackID);
+    this.destroy();
   }
 };
 
 
-if(config.redisStore === true){
+IncomingCallBack.prototype.destroy = function(){
+  delete incomingCallBacks[this.callBackID];
+};
 
-  initOffset = 1000;
 
-  subscribe = function(callBackID){
-    // redisSub.psubscribe("CB:"+callBackID+"*");
-  };
-
-  totalInit = function(remote){
-    if(remote === true){
-      return 6*initOffset; // could be set initially to numProceses * 1000
-    }
-    else{
-      return 0;
-    }
-  };
-
-  destroy = function(callBackID){
-    delete incomingCallBacks[callBackID];
-    // redisSub.punsubscribe("CB:"+callBackID+"*");
-  };
-}
-else{
-
-  subscribe = function(){};
-
-  totalInit = function(remote){
+function totalInit(processes){
+  if(processes > 1){
+    return processes*initOffset; // could be set initially to numProceses * 1000
+  }
+  else{
     return 0;
-  };
-
-  destroy = function(callBackID){
-    delete incomingCallBacks[callBackID];
-  };
-
+  }
 }
+
+

@@ -33,30 +33,18 @@ samsaara = (function Samsaara(module){
   var communication = module.communication = require('./lib/communication.js');
 
   var authentication = require('./lib/authentication.js');
-  var contextController = require('./lib/contextController.js');
+  // var contextController = require('./lib/contextController.js');
 
-  connectionController.setModels();
-
-  module.ipc = {
-    addIPCRoute : function(route, func){
-      // console.log(route, func);
-    },
-    publish: {},
-    subscribe: {},
-    unsubscribe: {},
-    subscribePattern: {},
-    unsubscribePattern: {},
-    routes: {}
-  };
+  // connectionController.setModels();
 
   var stack = [];
 
   var bringToMain = {
 
     connections: connectionController.connections,
-    sendTo: communication.sendTo,
+    // sendTo: communication.sendTo,
     sendToClient: communication.sendToClient,
-    sendToGroup: communication.sendToGroup,
+    // sendToGroup: communication.sendToGroup,
     nameSpaces: communication.nameSpaces,
     expose: communication.expose,
     exposeNamespace: communication.exposeNamespace,
@@ -72,8 +60,8 @@ samsaara = (function Samsaara(module){
     addUserSession: authentication.addUserSession,
     removeUserSession: authentication.removeUserSession,
 
-    Context: contextController.Context,
-    Access: contextController.Access,
+    // Context: contextController.Context,
+    // Access: contextController.Access,
     Connection: connectionController.Connection,
 
   };
@@ -91,7 +79,7 @@ samsaara = (function Samsaara(module){
   };
 
   module.nameSpaces.samsaara = {
-    switchContext: contextController.switchContext
+    // switchContext: contextController.switchContext
   };
   
   module.use = function(middleware){
@@ -123,9 +111,9 @@ samsaara = (function Samsaara(module){
         }
       }
 
-      contextController.setRedisStore();
-      authentication.setRedisStore();
-      communication.setRedisStore();
+      // contextController.setRedisStore();
+      // authentication.setRedisStore();
+      // communication.setRedisStore();
 
       for(var func in authentication.exported){
         module[func] = authentication.exported[func];
@@ -188,20 +176,23 @@ samsaara = (function Samsaara(module){
     var moduleObject = middleware(module);
     var objName;
 
+
+    console.log("Module", moduleObject.name);
+
     if(moduleObject.name){
       if(!module[moduleObject.name]){
         module[moduleObject.name] = {};
       }
     }
 
-    if(moduleObject.foundation){
-      for(objName in moduleObject.foundation){
+    if(moduleObject.foundationMethods){
+      for(objName in moduleObject.foundationMethods){
         if(!module[objName]){
-          console.log("INITIALIZING foundation method", objName);
+          console.log("INITIALIZING foundationMethods method", objName);
           if(moduleObject.name){
-            module[moduleObject.name][objName] = moduleObject.foundation[objName];
+            module[moduleObject.name][objName] = moduleObject.foundationMethods[objName];
           }
-          module[objName] = moduleObject.foundation[objName];
+          module[objName] = moduleObject.foundationMethods[objName];
         }
         else{
           throw new Error("Foundation method: " + objName + " is already an internal method on samsaara");
@@ -223,6 +214,7 @@ samsaara = (function Samsaara(module){
     if(moduleObject.connectionInitialization){
       // console.log("connectionController", connectionController);
       for(objName in moduleObject.connectionInitialization){
+        console.log("The Connection Controller Object", connectionController);
         connectionController.Connection.prototype.initializationMethods.push(moduleObject.connectionInitialization[objName]);
       }
     }
