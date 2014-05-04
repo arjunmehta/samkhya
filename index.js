@@ -17,53 +17,25 @@ samsaara = (function Samsaara(module){
  
   var config = module.config = require('./lib/config.js');
 
-  // EventEmitter.call(module);  
-  // config.emit = emitter(module);
-  // function emitter(samsaara){
-  //   return function(){
-  //     samsaara.emit.apply(samsaara, arguments);
-  //   };
-  // }
-
   var sockjs = require('sockjs');  
-  var sockjsOpts = { _pathTo: "/echo" };
+  var sockjsOpts = { socketPath: "/echo" };
   var sockjsServer = sockjs.createServer();
 
   var connectionController = module.connectionController = require('./lib/connectionController.js');  
   var communication = module.communication = require('./lib/communication.js');
 
-  var authentication = require('./lib/authentication.js');
-  // var contextController = require('./lib/contextController.js');
-
-  // connectionController.setModels();
+  // var authentication = require('./lib/authentication.js');
 
   var stack = [];
 
   var bringToMain = {
-
     connections: connectionController.connections,
-    // sendTo: communication.sendTo,
-    sendToClient: communication.sendToClient,
-    // sendToGroup: communication.sendToGroup,
+
     nameSpaces: communication.nameSpaces,
     expose: communication.expose,
     exposeNamespace: communication.exposeNamespace,
 
-    // contexts: contextController.contexts,
-    // openContext: contextController.openContext,
-    // openContextWithData: contextController.openContextWithData,
-    // isContextOpen: contextController.isContextOpen,
-    // switchContext: contextController.switchContext,
-    // linkContext: contextController.linkContext,
-    // clearFromContext: contextController.clearFromContext,
-
-    addUserSession: authentication.addUserSession,
-    removeUserSession: authentication.removeUserSession,
-
-    // Context: contextController.Context,
-    // Access: contextController.Access,
-    Connection: connectionController.Connection,
-
+    sendToClient: communication.sendToClient,
   };
 
   for(var func in bringToMain){
@@ -75,13 +47,9 @@ samsaara = (function Samsaara(module){
     geoPosition: connectionController.geoPosition,
     callItBack: communication.callItBack,
     callItBackError: communication.callItBackError,
-    requestRegistrationToken: authentication.requestRegistrationToken
+    // requestRegistrationToken: authentication.requestRegistrationToken
   };
 
-  module.nameSpaces.samsaara = {
-    // switchContext: contextController.switchContext
-  };
-  
   module.use = function(middleware){
     // console.log("NEW MIDDLEWARE", middleware);
     stack.push(middleware);
@@ -92,34 +60,30 @@ samsaara = (function Samsaara(module){
     if(opts){
 
       config.options = opts;
-      sockjsOpts._pathTo = opts.pathTo || "/echo";
+      sockjsOpts.socketPath = opts.socketPath || "/echo";
 
-      if(opts.redisStore){   
+      // if(opts.redisStore){   
 
-        if(opts.redisPub && opts.redisSub && opts.redisClient){
-          config.redisStore = true;
-          config.redisPub = opts.redisPub;
-          config.redisSub = opts.redisSub;
-          config.redisClient = opts.redisClient;
+      //   if(opts.redisPub && opts.redisSub && opts.redisClient){
+      //     config.redisStore = true;
+      //     config.redisPub = opts.redisPub;
+      //     config.redisSub = opts.redisSub;
+      //     config.redisClient = opts.redisClient;
 
-          config.redisClient.get("specialKey", function(err, reply){
-            config.specialKey = reply;
-          });
-        }
-        else{
-          throw new Error("RedisClient for redisPub, redisSub and redisClient must be provided in order for samsaara to work using Redis.");
-        }
-      }
+      //     config.redisClient.get("specialKey", function(err, reply){
+      //       config.specialKey = reply;
+      //     });
+      //   }
+      //   else{
+      //     throw new Error("RedisClient for redisPub, redisSub and redisClient must be provided in order for samsaara to work using Redis.");
+      //   }
+      // }
 
-      // contextController.setRedisStore();
-      // authentication.setRedisStore();
-      // communication.setRedisStore();
+      // for(var func in authentication.exported){
+      //   module[func] = authentication.exported[func];
+      // }
 
-      for(var func in authentication.exported){
-        module[func] = authentication.exported[func];
-      }
-
-      console.log("MIDDLE WARE STACK ", JSON.stringify(stack));
+      // console.log("MIDDLE WARE STACK ", JSON.stringify(stack));
 
       for (var i = 0; i < stack.length; i++) {
         initializeMiddleware(stack[i]);
@@ -162,7 +126,7 @@ samsaara = (function Samsaara(module){
       }
     }
 
-    sockjsServer.installHandlers( server, { prefix: sockjsOpts._pathTo } );
+    sockjsServer.installHandlers( server, { prefix: sockjsOpts.socketPath } );
 
     sockjsServer.on('connection', function (conn){
       connectionController.createNewConnection(conn);
@@ -173,58 +137,81 @@ samsaara = (function Samsaara(module){
 
   function initializeMiddleware(middleware){
 
-    var moduleObject = middleware(module);
+    var middlewareExported = middleware(module);
+    var moduleName = middlewareExported.name;
     var objName;
 
+    console.log("Module", middlewareExported.name, "Loaded");
 
-    console.log("Module", moduleObject.name);
-
-    if(moduleObject.name){
-      if(!module[moduleObject.name]){
-        module[moduleObject.name] = {};
+    if(moduleName){
+      if(!module[moduleName]){
+        module[moduleName] = {};
       }
     }
 
-    if(moduleObject.foundationMethods){
-      for(objName in moduleObject.foundationMethods){
-        if(!module[objName]){
-          console.log("INITIALIZING foundationMethods method", objName);
-          if(moduleObject.name){
-            module[moduleObject.name][objName] = moduleObject.foundationMethods[objName];
-          }
-          module[objName] = moduleObject.foundationMethods[objName];
+    if(middlewareExported.foundationMethods){
+      initializeFoundationMethods(moduleName, middlewareExported.foundationMethods);
+    }
+
+    if(middlewareExported.remoteMethods){
+      initializeRemoteMethods(moduleName, middlewareExported.remoteMethods);
+    }
+
+    if(middlewareExported.connectionInitialization){
+      // console.log("connectionController", connectionController);
+      connectionInitializationMethods(moduleName, middlewareExported.connectionInitialization);
+    }
+
+    if(middlewareExported.connectionClose){
+      connectionCloseMethods(moduleName, middlewareExported.connectionClose);
+    }
+  }
+
+
+  function initializeFoundationMethods(moduleName, methods){
+
+    for(var objName in methods){
+      if(!module[objName]){
+        // console.log("INITIALIZING foundationMethods method", objName);
+        if(moduleName){
+          module[moduleName][objName] = methods[objName];
         }
-        else{
-          throw new Error("Foundation method: " + objName + " is already an internal method on samsaara");
-        }        
+        module[objName] = methods[objName];
       }
+      else{
+        throw new Error("Foundation method: " + objName + " is already an internal method on samsaara");
+      }        
     }
+  }
 
-    if(moduleObject.remoteMethods){
+
+  function initializeRemoteMethods(moduleName, methods){
+      
+    for(var objName in methods){
       if(!module.nameSpaces.internal[objName]){
-        for(objName in moduleObject.remoteMethods){
-          module.nameSpaces.internal[objName] = moduleObject.remoteMethods[objName];
-        }
+        module.nameSpaces.internal[objName] = methods[objName];
       }
       else{
         throw new Error("Remote method: " + objName + " is already an internal method on samsaara");
       }
-    }
+    }     
+  }
 
-    if(moduleObject.connectionInitialization){
-      // console.log("connectionController", connectionController);
-      for(objName in moduleObject.connectionInitialization){
-        console.log("The Connection Controller Object", connectionController);
-        connectionController.Connection.prototype.initializationMethods.push(moduleObject.connectionInitialization[objName]);
-      }
-    }
-
-    if(moduleObject.connectionClose){
-      for(objName in moduleObject.connectionClose){
-        connectionController.Connection.prototype.closingMethods.push(moduleObject.connectionClose[objName]);
-      }
+  function connectionInitializationMethods(moduleName, methods){
+      
+    for(var objName in methods){
+      // console.log("The Connection Controller Object", connectionController);
+      connectionController.Connection.prototype.initializationMethods.push(methods[objName]);
     }
   }
+
+  function connectionCloseMethods(moduleName, methods){
+      
+    for(var objName in methods){
+      connectionController.Connection.prototype.closingMethods.push(methods[objName]);
+    }     
+  }
+
 
 })(samsaara);
 

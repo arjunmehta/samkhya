@@ -60,6 +60,7 @@ IncomingCallBack.prototype.callBackError = function(conn, args){
 
 
 IncomingCallBack.prototype.evaluateDestroy = function(){
+  // console.log("CallBack Evaluate Destroy", this.callBackID, this.list);
   if(this.total <= 0){
     // console.log("Deleting CallBack", this.callBackID);
     this.destroy();
@@ -73,7 +74,7 @@ IncomingCallBack.prototype.destroy = function(){
 
 
 function totalInit(processes){
-  if(processes > 1){
+  if(processes > 0){
     return processes*initOffset; // could be set initially to numProceses * 1000
   }
   else{

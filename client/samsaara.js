@@ -15,7 +15,8 @@ var samsaara = (function(samsaara){
   var sockConnectionTimerTime = 0;
   var sockConnectionTimer = null;
 
-  var heartBeat = {};
+  var heartBeat = {},
+      lastBeat = 0, heartBeatBeat = 0;
 
   var functionQueue = [];
   var outgoingCallBacks = {};
@@ -98,6 +99,9 @@ var samsaara = (function(samsaara){
   };
 
 
+
+
+
   /**
    * Private/Public Methods
    **/
@@ -138,7 +142,21 @@ var samsaara = (function(samsaara){
     }
   }
 
-  var send = function(packetJSON, owner, callBack){
+
+
+
+
+  /**
+   * Private Methods
+   **/
+
+  function sendRaw(message){
+    console.log("SENDING",message);
+    lastBeat = heartBeatBeat;
+    sockjs.send(message);
+  }
+
+  function send(packetJSON, owner, callBack){
 
     if(typeof callBack === "function"){
       var callBackID = makeIdAlpha(12);
@@ -147,26 +165,22 @@ var samsaara = (function(samsaara){
     }
 
     if(preinitialized === true){
-      packetJSON.token = samsaaraToken;
+      // packetJSON.token = samsaaraToken;
       // if(packetJSON.owner !== undefined && packetJSON.owner !== samsaaraOwner)
-      sockjs.send( JSON.stringify([owner, packetJSON]) );
-      // console.log("SENDING", JSON.stringify([owner, packetJSON]));
+      sendRaw( JSON.stringify([owner, packetJSON]) );  //    +":"+samsaaraToken+"::"
     }
     else{
       functionQueue.push( packetJSON );
     }
-  };
+  }
 
-  var nsSend = function(ns, packet, callBack){
+  function nsSend(ns, packet, callBack){
     packet.ns = ns;
     send(packet, callBack);
-  };
+  }
 
-  /**
-   * Private Methods
-   **/
 
-  var initSock = function(){
+  function initSock(){
 
     sockjs = new SockJS(sockjs_url);
 
@@ -185,7 +199,7 @@ var samsaara = (function(samsaara){
             var sessionInfoParsed = JSON.parse(sessionInfo);
             if(sessionInfo.err === undefined){
               navInfo.sessionInfo = {sessionID: sessionInfoParsed.sessionID, userID: sessionInfoParsed.userID};
-              sockjs.send( JSON.stringify( [samsaaraOwner, {login: [registrationToken, sessionInfo]}] ));
+              sendRaw( JSON.stringify( [samsaaraOwner, {login: [registrationToken, sessionInfo]}] ));
             }
           });
         });
@@ -216,13 +230,16 @@ var samsaara = (function(samsaara){
         initSock();
       }, sockConnectionTimerTime);
     };
-  };
+  }
 
-  var heartBeater = function(){
-    sockjs.send('H');
-  };
+  function heartBeater(){
+    if(lastBeat < heartBeatBeat - 1){
+      sendRaw('H');
+    }
+    heartBeatBeat++;
+  }
 
-  var evalMessage = function (messageParsed){
+  function evalMessage(messageParsed){
 
     var messageObj = messageParsed[1];
     messageObj.owner = messageParsed[0];
@@ -234,7 +251,7 @@ var samsaara = (function(samsaara){
     }
     if(messageObj.samsaaraOwner !== undefined){
       samsaaraOwner = messageObj.samsaaraOwner;
-      sockjs.send( JSON.stringify( [samsaaraOwner, {opts: remoteOptions}] ));
+      sendRaw( JSON.stringify( [samsaaraOwner, {opts: remoteOptions}] ));
       console.log("samsaaraOwner:" + samsaaraOwner);
     }
     if(messageObj.samsaaraToken !== undefined){
@@ -261,7 +278,7 @@ var samsaara = (function(samsaara){
         console.log("Samsaara Error:", messageObj.internal, "Is not a valid property of this Samsaara Object");
       }
     }
-  };
+  }
 
   function preinitializeWithToken(token){
     samsaaraToken = token;
@@ -296,14 +313,12 @@ var samsaara = (function(samsaara){
     var theCallBack = function(){
       var args = Array.prototype.slice.call(arguments);
       if(typeof args[args.length-1] === "function"){
-        theCallBack = args.pop();
-        processAndSend(0, {ns:"internal", func:"callItBack"}, [id, owner, args, theCallBack], owner);
+        var aCallBack = args.pop();
+        processAndSend(0, {ns:"internal", func:"callItBack"}, [id, args, aCallBack], owner);
       }
       else{
-        processAndSend(0, {ns:"internal", func:"callItBack"}, [id, owner, args], owner);
-      }
-      
-      // send({internal: "callItBack", args: [id, owner, args] } );
+        processAndSend(0, {ns:"internal", func:"callItBack"}, [id, args], owner);
+      }      
       delete outgoingCallBacks[id];
     };
     return theCallBack;

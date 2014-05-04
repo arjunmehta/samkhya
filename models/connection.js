@@ -19,8 +19,9 @@ var samsaara = require('../index.js');
 var config = require('../lib/config');
 var authentication = require('../lib/authentication');
 var communication = require('../lib/communication');
+var connectionController = require('../lib/connectionController');
 
-var connections = require('../lib/connectionController').connections;
+var connections = connectionController.connections;
 var router = require('../lib/communication').router;
 var contexts = require('../lib/contextController').contexts;
 
@@ -102,17 +103,19 @@ function Connection(conn){
 
 Connection.prototype.handleMessage = function(message){
   if(message === 'H'){
-    console.log("Heartbeat...", this.id);
-    this.lastHeartBeat = new Date().getTime();
+    // console.log("Heartbeat...", this.id);
+    this.lastHeartBeat = connectionController.currentBeat;
   }
   else{
     this.routeMessage(message);
   }
 };
 
+
 Connection.prototype.routeMessage = function(message){
   this.preprocessMessage(message);
 };
+
 
 Connection.prototype.preprocessMessage = function(message){
   var parsedMessage;
@@ -125,25 +128,11 @@ Connection.prototype.preprocessMessage = function(message){
   this.filterMessage(parsedMessage[1]);
 };
 
-// Connection.prototype.router = function(message){
-//   if(message === 'H'){
-//     // console.log("Heartbeat...", whichOne.id);
-//     this.lastHeartBeat = new Date().getTime();
-//   }
-//   else{
-//     var route = message.substr(2,8);
-//     // console.log(config.uuid, "MESSAGE ROUTE", route);
-//     if(route === config.uuid){
-//       parseAndReceiveSub(whichOne, message);
-//     }
-//     else{
-//       console.log("TRYING TO ROUTE MESSAGE TO", "PRC:"+route+":RCV:"+whichOne.id);
-//       ipc.sendToProcess(route, whichOne.id+":"+whichOne.token+"::"+message);
-//     }
-//   }
-// };
+
 
 Connection.prototype.messageHandlers = [];
+
+
 
 Connection.prototype.filterMessage = function (messageObj){
 
@@ -174,6 +163,7 @@ Connection.prototype.filterMessage = function (messageObj){
 };
 
 
+
 // authentication.filterMessage = function(connection, messageObj, next){
 //   if(connection.token === messageObj.token || connection.oldToken === messageObj.token){
 //     next();
@@ -186,6 +176,7 @@ Connection.prototype.filterMessage = function (messageObj){
 // ipc.routeMessage = function(connection, messageObj, next){
 //   next();
 // };
+
 
 
 Connection.prototype.receiveMessage = function (messageObj, token){
@@ -203,25 +194,23 @@ Connection.prototype.receiveMessage = function (messageObj, token){
     
     // console.log("INCOMING MESSAGE RECEIVED", messageObj);
 
-    messageObj.sender = this.id;
+  messageObj.sender = this.id;
 
-    if(messageObj.func !== undefined){
-      communication.executeFunction(this, messageObj);
-    }
-    else if(messageObj.internal !== undefined){
-      messageObj.ns = "internal";
-      messageObj.func = messageObj.internal;
-      communication.executeFunction(this, messageObj);
-    }
-    else if(messageObj.opts !== undefined){
-      log.info(process.pid, moduleName, messageObj.opts);
-      this.initialize(messageObj.opts);
-    }
-    else if(messageObj.login !== undefined){
-      loginConnection(this, messageObj);
-    }
-
-
+  if(messageObj.func !== undefined){
+    communication.executeFunction(this, messageObj);
+  }
+  else if(messageObj.internal !== undefined){
+    messageObj.ns = "internal";
+    messageObj.func = messageObj.internal;
+    communication.executeFunction(this, messageObj);
+  }
+  else if(messageObj.opts !== undefined){
+    log.info(process.pid, moduleName, messageObj.opts);
+    this.initialize(messageObj.opts);
+  }
+  else if(messageObj.login !== undefined){
+    loginConnection(this, messageObj);
+  }
 };
 
 
@@ -249,6 +238,7 @@ Connection.prototype.initialize = function(opts){
 
 Connection.prototype.completeInitialization = function(){
   if(this.initialized === false){
+    console.log(config.uuid, this.id, "Initialized");
     communication.sendToClient(this.id, {internal: "samsaaraInitialized", args: [true]}, function (confirmation){
       this.initialized = true;
       samsaara.emit('initialized', this);
@@ -329,14 +319,14 @@ Connection.prototype.write = function(message){
   this.conn.write(message);
 };
 
-Object.defineProperty(Connection.prototype, 'currentContext', {
-    get: function() {
-        return contexts[this.context];
-    },
-    set: function(context) {
-        this.context = context.contextID;
-    }
-});
+// Object.defineProperty(Connection.prototype, 'currentContext', {
+//     get: function() {
+//         return contexts[this.context];
+//     },
+//     set: function(context) {
+//         this.context = context.contextID;
+//     }
+// });
 
 
 
@@ -344,22 +334,22 @@ Object.defineProperty(Connection.prototype, 'currentContext', {
  * Redis Specific Methods for new and closing connections
  */
 
-Connection.prototype.subscribeRedis = function(){
-  config.redisSub.subscribe("NTV:"+this.id);
-  config.redisClient.incr("totalCurrentCount");
-};
+// Connection.prototype.subscribeRedis = function(){
+//   config.redisSub.subscribe("NTV:"+this.id);
+//   config.redisClient.incr("totalCurrentCount");
+// };
 
-Connection.prototype.unsubscribeRedis = function (){
+// Connection.prototype.unsubscribeRedis = function (){
 
-  config.redisSub.unsubscribe("NTV:"+this.id);
-  config.redisClient.decr("totalCurrentCount");
-  var foreignContext = this.foreignContext;
+//   config.redisSub.unsubscribe("NTV:"+this.id);
+//   config.redisClient.decr("totalCurrentCount");
+//   var foreignContext = this.foreignContext;
 
-  if(foreignContext !== null){
-    log.info(process.pid, moduleName, "CTX: Closing Connection Request", foreignContext);
-    config.redisPub.publish("CTX:"+foreignContext, JSON.stringify( {disconnect: this.id}) );
-  }
-};
+//   if(foreignContext !== null){
+//     log.info(process.pid, moduleName, "CTX: Closing Connection Request", foreignContext);
+//     config.redisPub.publish("CTX:"+foreignContext, JSON.stringify( {disconnect: this.id}) );
+//   }
+// };
 
 
 // Connection.prototype.receive = function(messageObj){
@@ -398,7 +388,7 @@ InitializedAttributes.prototype.force = function(attribute){
 
 InitializedAttributes.prototype.initialized = function(err, attribute){
 
-  console.log("////////////////////////////////InitializedAttributes", attribute, this.forced);
+  console.log("...Initialized attribute", attribute, this.forced);
 
   if(err) console.log(err);
 
@@ -449,7 +439,7 @@ function navInfoInitOptions(opts, connection, attributes){
 
     attributes.initialized(null, "navInfo");
   });
-
+  
 }
 
 function timeOffsetInitOptions(opts, connection, attributes){
