@@ -7,7 +7,6 @@
 // var memwatch = require('memwatch');
 
 
-
 var helper = require('../lib/helper');
 
 var path = require("path");
@@ -15,17 +14,13 @@ var log = require("../lib/log");
 var moduleName = path.basename(module.filename);
 
 var samsaara = require('../index.js');
-
 var config = require('../lib/config');
-var authentication = require('../lib/authentication');
+
 var communication = require('../lib/communication');
 var connectionController = require('../lib/connectionController');
+var router = require('../lib/router');
 
 var connections = connectionController.connections;
-var router = require('../lib/communication').router;
-var contexts = require('../lib/contextController').contexts;
-
-var timeAccuracy = 7;
 
 exports = module.exports = Connection;
 
@@ -36,47 +31,16 @@ function Connection(conn){
   this.id = conn.id;
   this.conn = conn;
 
+  this.owner = config.uuid;
+
+  this.initializeAttributes = new InitializedAttributes(this);
+  this.initialized = false;
+
+  this.lastHeartBeat = 0;
+
   this.userID = 'anonymous' + helper.makeIdAlphaNumerical(5);
   this.key = helper.makeIdAlphaNumerical(20) + conn.id;
-
   this.token = helper.makeUniqueHash('sha1', this.key, [this.userID]);
-
-  this.connectionClass = "native";
-
-  this.initialized = false;
-  this.initializeAttributes = new InitializedAttributes(this);
-
-  this.lastHeartBeat = new Date().getTime();
-
-  this.navInfo = {
-    connectionTimings: {
-      latencies: [],
-      measurableDifferences: [],
-      clientOffsetGuesses: [],
-      afterMin: 10000000000000000000,
-      clientOffset: 0,
-    },
-
-    groups: [],
-
-    timeOffset: 0,
-    protocol: "",
-    remoteAddress: "",
-
-    windowWidth: 0,
-    windowHeight: 0,
-    geoposition: {}
-  };
-
-  this.groups = [];
-
-  this.context = null;
-  this.foreignContext = null;
-  this.owner = process.pid;
-
-  this.routes = [];
-
-  // Events  
 
   conn.on('close', function (message){
     connection.closeConnection(message);
@@ -88,11 +52,11 @@ function Connection(conn){
 
   conn.write(JSON.stringify([config.uuid,{
     samsaaraID: conn.id, 
-    samsaaraToken: connection.token, 
-    samsaaraOwner: config.uuid
+    samsaaraToken: connection.token,
+    samsaaraOwner: config.uuid,
+    samsaaraHeartBeat: connectionController.heartBeatThreshold
   }]));
 
-  // console.log("CONNECTION INSTANCE OF SAMSAARA", samsaara);
   samsaara.emit("connect", this);
 
   if(config.redisStore === true){
@@ -101,118 +65,6 @@ function Connection(conn){
 
 }
 
-Connection.prototype.handleMessage = function(message){
-  if(message === 'H'){
-    // console.log("Heartbeat...", this.id);
-    this.lastHeartBeat = connectionController.currentBeat;
-  }
-  else{
-    this.routeMessage(message);
-  }
-};
-
-
-Connection.prototype.routeMessage = function(message){
-  this.preprocessMessage(message);
-};
-
-
-Connection.prototype.preprocessMessage = function(message){
-  var parsedMessage;
-    try{
-       parsedMessage = JSON.parse(message);    
-    }
-    catch(e){
-      log.error("MESSAGE ERROR: INVALID JSON", message, e);
-    }
-  this.filterMessage(parsedMessage[1]);
-};
-
-
-
-Connection.prototype.messageHandlers = [];
-
-
-
-Connection.prototype.filterMessage = function (messageObj){
-
-  var connection = this;
-  var handlersLength = connection.messageHandlers.length;
-
-  if(handlersLength > 0){
-    var i = 0;
-    next();
-  }
-  else{
-    connection.receiveMessage(messageObj);
-  }
-
-  function next(err){
-    if(err){
-      console.log("Message Acceptance Error", err);
-    }
-    else if(i < handlersLength){
-      connection.messageHandlers[i](connection, messageObj, next);
-      i++;
-    }   
-    else{
-      connection.receiveMessage(messageObj);
-    }
-  }
-
-};
-
-
-
-// authentication.filterMessage = function(connection, messageObj, next){
-//   if(connection.token === messageObj.token || connection.oldToken === messageObj.token){
-//     next();
-//   }
-//   else{
-//     next(new Error("Invalid Authentication Token for connection"));
-//   }  
-// };
-
-// ipc.routeMessage = function(connection, messageObj, next){
-//   next();
-// };
-
-
-
-Connection.prototype.receiveMessage = function (messageObj, token){
-
-  // var tokenMatch;
-
-  // if(token === undefined){
-  //   tokenMatch = (this.token === messageObj.token) || (this.oldToken === messageObj.token);
-  // }
-  // else{
-  //   tokenMatch = (token === messageObj.token);
-  // }
-
-  // if(this.id !== undefined && tokenMatch === true){
-    
-    // console.log("INCOMING MESSAGE RECEIVED", messageObj);
-
-  messageObj.sender = this.id;
-
-  if(messageObj.func !== undefined){
-    communication.executeFunction(this, messageObj);
-  }
-  else if(messageObj.internal !== undefined){
-    messageObj.ns = "internal";
-    messageObj.func = messageObj.internal;
-    communication.executeFunction(this, messageObj);
-  }
-  else if(messageObj.opts !== undefined){
-    log.info(process.pid, moduleName, messageObj.opts);
-    this.initialize(messageObj.opts);
-  }
-  else if(messageObj.login !== undefined){
-    loginConnection(this, messageObj);
-  }
-};
-
 
 Connection.prototype.initializationMethods = [];
 
@@ -220,9 +72,22 @@ Connection.prototype.initializationMethods = [];
 Connection.prototype.closingMethods = [];
 
 
+Connection.prototype.handleMessage = function(raw_message){
+
+  this.lastHeartBeat = connectionController.globalBeat;
+
+  if(raw_message !== 'H'){    
+    router.newConnectionMessage(this, raw_message);  
+  }
+  else{
+    console.log("Heartbeat...", this.id, this.lastHeartBeat, connectionController.globalBeat);  
+  }
+};
+
+
 Connection.prototype.initialize = function(opts){
 
-  console.log("TRYING TO INITIALIZE CONNECTION", this.id);
+  console.log("Trying To Initialize Connection...", this.id);
 
   opts = opts || {};
 
@@ -232,7 +97,6 @@ Connection.prototype.initialize = function(opts){
   for(var i=0; i < this.initializationMethods.length; i++){
     this.initializationMethods[i](opts, connection, ia);
   }
-
 };
 
 
@@ -289,91 +153,11 @@ Connection.prototype.closeConnection = function(message){
 };
 
 
-
-
-
-
-// Connection.prototype.addNewRoute = function(routeName){
-//   var i = 0;
-//   var routes = this.routes;
-//   while(routes[i] === undefined || routes[i] === null){
-
-//   }
-//   return routeID.toString(36);
-// };
-
-
-// Connection.prototype.getRoute = function(routeID){
-//   routeID = parseInt(routeID, 10);
-//   return this.routes[routeID];
-// };
-
-
-// Connection.prototype.removeRoute = function(routeID){
-//   routeID = parseInt(routeID, 10);
-//   this.routes[routeID] = undefined;
-// };
-
 Connection.prototype.write = function(message){
   // console.log(process.pid.toString(), "NATIVE write on", "NATIVE CONNECTION WRITING");
   this.conn.write(message);
 };
 
-// Object.defineProperty(Connection.prototype, 'currentContext', {
-//     get: function() {
-//         return contexts[this.context];
-//     },
-//     set: function(context) {
-//         this.context = context.contextID;
-//     }
-// });
-
-
-
-/**
- * Redis Specific Methods for new and closing connections
- */
-
-// Connection.prototype.subscribeRedis = function(){
-//   config.redisSub.subscribe("NTV:"+this.id);
-//   config.redisClient.incr("totalCurrentCount");
-// };
-
-// Connection.prototype.unsubscribeRedis = function (){
-
-//   config.redisSub.unsubscribe("NTV:"+this.id);
-//   config.redisClient.decr("totalCurrentCount");
-//   var foreignContext = this.foreignContext;
-
-//   if(foreignContext !== null){
-//     log.info(process.pid, moduleName, "CTX: Closing Connection Request", foreignContext);
-//     config.redisPub.publish("CTX:"+foreignContext, JSON.stringify( {disconnect: this.id}) );
-//   }
-// };
-
-
-// Connection.prototype.receive = function(messageObj){
-
-//   var tokenMatch = (this.token === messageObj.token) || (this.oldToken === messageObj.token);
-
-//   if(messageObj.opts){
-//     log.info(process.pid, moduleName, messageObj.opts);
-//     connectionController.initializeConnection(this.id, messageObj.opts);
-//   }
-
-//   if(messageObj.login){
-//     this.loginConnection(messageObj);
-//   }
-
-//   if(messageObj.func){    
-//     if(tokenMatch){
-//       this.executeFunction(messageObj);
-//     }
-//     else{
-//       log.info(process.pid, moduleName, process.pid, "ERROR: Token Mismatch:", this.token, messageObj.token);
-//     }
-//   }
-// };
 
 
 function InitializedAttributes(connection){
@@ -412,6 +196,15 @@ InitializedAttributes.prototype.allInitialized = function(){
 
 
 
+
+
+
+
+
+
+
+
+
 var initializationMethods = {
   navInfo: navInfoInitOptions,
   timeOffset: timeOffsetInitOptions,
@@ -423,7 +216,10 @@ for(var ext in initializationMethods){
   Connection.prototype.initializationMethods.push(initializationMethods[ext]);
 }
 
+
 function navInfoInitOptions(opts, connection, attributes){
+
+  connection.navInfo = {};
 
   console.log("Initializing NavInfo...");
   attributes.force("navInfo");
@@ -434,21 +230,31 @@ function navInfoInitOptions(opts, connection, attributes){
       connNavInfo[key] = navInfo[key];
     }
 
-    connNavInfo.remoteAddress = this.remoteAddress;
-    connNavInfo.protocol = this.protocol;
-
     attributes.initialized(null, "navInfo");
   });
-  
 }
 
+
 function timeOffsetInitOptions(opts, connection, attributes){
+
+  connection.timeOffset = null;
+
+  connection.connectionTimings = {
+      latencies: [],
+      measurableDifferences: [],
+      clientOffsetGuesses: [],
+      afterMin: 10000000000000000000,
+      clientOffset: 0,
+      timeAccuracy: 7
+    };
+
   if(opts.timeOffset !== undefined){
     console.log("Initializing Time Offset...");
     if(opts.timeOffset === "force") attributes.force("timeOffset");
     testTime(connection.id);
   }
 }
+
 
 function geoLocationInitOptions(opts, connection, attributes){
   if(opts.geoLocation !== undefined){
@@ -458,7 +264,11 @@ function geoLocationInitOptions(opts, connection, attributes){
   }
 }
 
+
 function windowSizeInitOptions(opts, connection, attributes){
+
+  connection.clientWindow = {};
+
   if(opts.windowSize !== undefined){
     console.log("Initializing Window Size...");
     if(opts.windowSize === "force") attributes.force("windowSize");
@@ -472,8 +282,8 @@ function windowSizeInitOptions(opts, connection, attributes){
 function testTime (connID){
   // console.log("Testing Time...");
   var currentTime = new Date().getTime();
-  if(connections[connID].navInfo.connectionTimings.afterMin < 10000000000){
-    communication.sendToClient(connID, {internal: "testTime", args:[( connections[connID].navInfo.connectionTimings.afterMin ), currentTime]}, testTimeReturn);
+  if(connections[connID].connectionTimings.afterMin < 10000000000){
+    communication.sendToClient(connID, {internal: "testTime", args:[( connections[connID].connectionTimings.afterMin ), currentTime]}, testTimeReturn);
   }
   else{
     communication.sendToClient(connID, {internal: "testTime", args:[0, currentTime]}, testTimeReturn);
@@ -490,36 +300,37 @@ function testTimeReturn (originalTime, clientTime, timeError){
 
   // console.log(this.navInfo, originalTime, clientTime, timeError, "//////////////////////////////////////////////////////////////////////////////////////////////////////");
 
-  if(this.navInfo.connectionTimings.latencies.length > timeAccuracy){
-    this.navInfo.connectionTimings.latencies.shift();
-    this.navInfo.connectionTimings.measurableDifferences.shift();
-    this.navInfo.connectionTimings.clientOffsetGuesses.shift();
+  if(this.connectionTimings.latencies.length > this.connectionTimings.timeAccuracy){
+    this.connectionTimings.latencies.shift();
+    this.connectionTimings.measurableDifferences.shift();
+    this.connectionTimings.clientOffsetGuesses.shift();
   }
 
-  this.navInfo.connectionTimings.latencies.push( latency );
-  this.navInfo.connectionTimings.measurableDifferences.push( measurableDifference );
+  this.connectionTimings.latencies.push( latency );
+  this.connectionTimings.measurableDifferences.push( measurableDifference );
 
-  var currenAfterMin = helper.min(this.navInfo.connectionTimings.measurableDifferences);
-  if (currenAfterMin < this.navInfo.connectionTimings.afterMin) {
-    this.navInfo.connectionTimings.afterMin = currenAfterMin;
+  var currenAfterMin = helper.min(this.connectionTimings.measurableDifferences);
+  if (currenAfterMin < this.connectionTimings.afterMin) {
+    this.connectionTimings.afterMin = currenAfterMin;
   }
 
   var lagBehind = latency - timeError;
 
-  if(this.navInfo.connectionTimings.latencies.length > 2){
-    this.navInfo.connectionTimings.clientOffsetGuesses.push( measurableDifference - lagBehind );
+  if(this.connectionTimings.latencies.length > 2){
+    this.connectionTimings.clientOffsetGuesses.push( measurableDifference - lagBehind );
   }
 
-  this.navInfo.connectionTimings.clientOffset = helper.median(this.navInfo.connectionTimings.clientOffsetGuesses);
+  this.connectionTimings.clientOffset = helper.median(this.connectionTimings.clientOffsetGuesses);
 
-  if(this.navInfo.connectionTimings.latencies.length < timeAccuracy){
+  if(this.connectionTimings.latencies.length < this.connectionTimings.timeAccuracy){
     testTime(this.id);
   }
   else{
-    console.log(""+process.pid, moduleName, this.id, "Time Offset:", this.navInfo.connectionTimings.clientOffset);
-    this.navInfo.timeOffset = this.navInfo.connectionTimings.clientOffset;
-    communication.sendToClient(this.id, {internal: "updateOffset", args: [this.navInfo.connectionTimings.clientOffset]});
+    console.log(""+process.pid, moduleName, this.id, "Time Offset:", this.connectionTimings.clientOffset);
+    this.timeOffset = this.connectionTimings.clientOffset;
+    communication.sendToClient(this.id, {internal: "updateOffset", args: [this.connectionTimings.clientOffset]});
     this.initializeAttributes.initialized(null, "timeOffset");
+    delete this.connectionTimings;
   }
 
 }
@@ -531,8 +342,8 @@ function testTimeReturn (originalTime, clientTime, timeError){
 function windowResize(width, height, windowOffsetX, windowOffsetY){
   //this is the connection that returns the message
 
-  this.navInfo.windowWidth = width;
-  this.navInfo.windowHeight = height;
+  this.clientWindow.windowWidth = width;
+  this.clientWindow.windowHeight = height;
 
   if(windowOffsetX){
     samsaara.emit('windowSize', this, width, height, windowOffsetX, windowOffsetY);
@@ -545,8 +356,8 @@ function windowResize(width, height, windowOffsetX, windowOffsetY){
 
 function geoPosition(err, geoposition){
   //this is the connection that returns the message
-  if(this.navInfo !== undefined){
-    this.navInfo.geoposition = geoposition;
+  if(this.conn !== undefined){
+    this.geoposition = geoposition;
     this.initializeAttributes.initialized(err, "geoLocation");
     samsaara.emit('geoPosition', this, err, geoposition);
   }

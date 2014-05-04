@@ -61,7 +61,7 @@ var samsaara = (function(samsaara){
       if(opts.windowSize){
         remoteOptions.windowSize = opts.windowSize;
         window.onresize = function(e){
-          send( {internal:"windowResize", args:[window.innerWidth, window.innerHeight] } );
+          send( {ns: "internal", func: "windowResize", args:[window.innerWidth, window.innerHeight] } );
         };
       }
       if(opts.socksURL){
@@ -167,7 +167,7 @@ var samsaara = (function(samsaara){
     if(preinitialized === true){
       // packetJSON.token = samsaaraToken;
       // if(packetJSON.owner !== undefined && packetJSON.owner !== samsaaraOwner)
-      sendRaw( JSON.stringify([owner, packetJSON]) );  //    +":"+samsaaraToken+"::"
+      sendRaw( owner+"::"+JSON.stringify(packetJSON) );  //    +":"+samsaaraToken+"::"
     }
     else{
       functionQueue.push( packetJSON );
@@ -187,19 +187,17 @@ var samsaara = (function(samsaara){
     sockjs.onopen = function(){
       console.log('[*] open', sockjs.protocol);
 
-      sockConnectionTimerTime = 0;
-
-      clearInterval(heartBeat);
-      heartBeat = setInterval(heartBeater, 10000);
+      sockConnectionTimerTime = 0;      
 
       if(options && options.session){
         // console.log("*******************ATTEMPTING TO LOG IN SESSION");
-        send({internal: "requestRegistrationToken"}, samsaaraOwner, function (err, registrationToken){
+        send({ns: "internal", func: "requestRegistrationToken"}, samsaaraOwner, function (err, registrationToken){
           httpGet("/registerSamsaaraConnection?regtoken=" + registrationToken, function (sessionInfo){
             var sessionInfoParsed = JSON.parse(sessionInfo);
             if(sessionInfo.err === undefined){
               navInfo.sessionInfo = {sessionID: sessionInfoParsed.sessionID, userID: sessionInfoParsed.userID};
-              sendRaw( JSON.stringify( [samsaaraOwner, {login: [registrationToken, sessionInfo]}] ));
+              nsFunc("authentication", "login", registrationToken, sessionInfo);
+            // JSON.stringify( [samsaaraOwner, {login: [registrationToken, sessionInfo]}]
             }
           });
         });
@@ -236,6 +234,7 @@ var samsaara = (function(samsaara){
     if(lastBeat < heartBeatBeat - 1){
       sendRaw('H');
     }
+    console.log("Beat Beat", lastBeat, heartBeatBeat);
     heartBeatBeat++;
   }
 
@@ -244,14 +243,17 @@ var samsaara = (function(samsaara){
     var messageObj = messageParsed[1];
     messageObj.owner = messageParsed[0];
 
-
+    if(messageObj.samsaaraHeartBeat){
+      clearInterval(heartBeat);
+      heartBeat = setInterval(heartBeater, messageObj.samsaaraHeartBeat);
+    }
     if(messageObj.samsaaraID !== undefined){
       samsaaraID = messageObj.samsaaraID;
       console.log("CONNECTED AS:" + samsaaraID);
     }
     if(messageObj.samsaaraOwner !== undefined){
       samsaaraOwner = messageObj.samsaaraOwner;
-      sendRaw( JSON.stringify( [samsaaraOwner, {opts: remoteOptions}] ));
+      sendRaw( samsaaraOwner+"::"+JSON.stringify({opts: remoteOptions}) );
       console.log("samsaaraOwner:" + samsaaraOwner);
     }
     if(messageObj.samsaaraToken !== undefined){
@@ -265,7 +267,7 @@ var samsaara = (function(samsaara){
       else{
         console.log("Samsaara Error:", messageObj.func, "Is not a valid property of this Samsaara Object", messageObj);
         if(messageObj.callBack){
-          send({internal: "callItBackError", args: [messageObj.callBack, messageObj.owner, ["ERROR: Invalid Object on Client"]]}, messageObj.owner);
+          send({ns: "internal", func:  "callItBackError", args: [messageObj.callBack, messageObj.owner, ["ERROR: Invalid Object on Client"]]}, messageObj.owner);
         }
       }
     }

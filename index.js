@@ -4,8 +4,8 @@
  * MIT Licensed
  */
 
-var log = require("./lib/log.js");
-var helper = require('./lib/helper.js');
+var log = require("./lib/log");
+var helper = require('./lib/helper');
 
 var EventEmitter = require('events').EventEmitter;
 
@@ -13,47 +13,39 @@ var samsaara = new EventEmitter();
 
 exports = module.exports = samsaara;
 
+
+/**
+ * samsaara Core Object
+ */
+
 samsaara = (function Samsaara(module){
  
-  var config = module.config = require('./lib/config.js');
+  var config = module.config = require('./lib/config');
 
   var sockjs = require('sockjs');  
   var sockjsOpts = { socketPath: "/echo" };
   var sockjsServer = sockjs.createServer();
 
-  var connectionController = module.connectionController = require('./lib/connectionController.js');  
-  var communication = module.communication = require('./lib/communication.js');
-
-  // var authentication = require('./lib/authentication.js');
+  var connectionController,
+      communication,
+      router;
 
   var stack = [];
 
-  var bringToMain = {
-    connections: connectionController.connections,
 
-    nameSpaces: communication.nameSpaces,
-    expose: communication.expose,
-    exposeNamespace: communication.exposeNamespace,
-
-    sendToClient: communication.sendToClient,
-  };
-
-  for(var func in bringToMain){
-    module[func] = bringToMain[func];
-  }
-
-  module.nameSpaces.internal = {
-    windowResize: connectionController.windowResize,
-    geoPosition: connectionController.geoPosition,
-    callItBack: communication.callItBack,
-    callItBackError: communication.callItBackError,
-    // requestRegistrationToken: authentication.requestRegistrationToken
-  };
+  /**
+   * Middleware loader
+   */
 
   module.use = function(middleware){
     // console.log("NEW MIDDLEWARE", middleware);
     stack.push(middleware);
   };
+
+
+  /**
+   * Initialize everything
+   */
 
   module.initialize = function (server, app, opts){
 
@@ -61,33 +53,6 @@ samsaara = (function Samsaara(module){
 
       config.options = opts;
       sockjsOpts.socketPath = opts.socketPath || "/echo";
-
-      // if(opts.redisStore){   
-
-      //   if(opts.redisPub && opts.redisSub && opts.redisClient){
-      //     config.redisStore = true;
-      //     config.redisPub = opts.redisPub;
-      //     config.redisSub = opts.redisSub;
-      //     config.redisClient = opts.redisClient;
-
-      //     config.redisClient.get("specialKey", function(err, reply){
-      //       config.specialKey = reply;
-      //     });
-      //   }
-      //   else{
-      //     throw new Error("RedisClient for redisPub, redisSub and redisClient must be provided in order for samsaara to work using Redis.");
-      //   }
-      // }
-
-      // for(var func in authentication.exported){
-      //   module[func] = authentication.exported[func];
-      // }
-
-      // console.log("MIDDLE WARE STACK ", JSON.stringify(stack));
-
-      for (var i = 0; i < stack.length; i++) {
-        initializeMiddleware(stack[i]);
-      }      
 
       if(app){
 
@@ -126,6 +91,37 @@ samsaara = (function Samsaara(module){
       }
     }
 
+    connectionController = module.connectionController = require('./lib/connectionController');  
+    communication = module.communication = require('./lib/communication');     
+    router = module.router = require('./lib/router');     
+    
+    for (var i = 0; i < stack.length; i++) {
+      initializeMiddleware(stack[i]);
+    } 
+
+    var bringToMain = {
+      connections: connectionController.connections,
+
+      nameSpaces: communication.nameSpaces,
+      expose: communication.expose,
+      exposeNamespace: communication.exposeNamespace,
+
+      sendToClient: communication.sendToClient,
+    };
+
+    for(var func in bringToMain){
+      module[func] = bringToMain[func];
+    }
+
+    module.nameSpaces.internal = {
+      windowResize: connectionController.windowResize,
+      geoPosition: connectionController.geoPosition,
+      callItBack: communication.callItBack,
+      callItBackError: communication.callItBackError,
+      // requestRegistrationToken: authentication.requestRegistrationToken
+    };
+
+
     sockjsServer.installHandlers( server, { prefix: sockjsOpts.socketPath } );
 
     sockjsServer.on('connection', function (conn){
@@ -135,13 +131,17 @@ samsaara = (function Samsaara(module){
   };
 
 
+  /**
+   * Plugs in middleware methods throughout samsaara
+   */
+
   function initializeMiddleware(middleware){
 
-    var middlewareExported = middleware(module);
-    var moduleName = middlewareExported.name;
+    var middlewareExports = middleware(module);
+    var moduleName = middlewareExports.name;
     var objName;
 
-    console.log("Module", middlewareExported.name, "Loaded");
+    console.log("Module", middlewareExports.name, "Loaded");
 
     if(moduleName){
       if(!module[moduleName]){
@@ -149,22 +149,42 @@ samsaara = (function Samsaara(module){
       }
     }
 
-    if(middlewareExported.foundationMethods){
-      initializeFoundationMethods(moduleName, middlewareExported.foundationMethods);
+    if(middlewareExports.foundationMethods){
+      initializeFoundationMethods(moduleName, middlewareExports.foundationMethods);
     }
 
-    if(middlewareExported.remoteMethods){
-      initializeRemoteMethods(moduleName, middlewareExported.remoteMethods);
+    if(middlewareExports.remoteMethods){
+      initializeRemoteMethods(moduleName, middlewareExports.remoteMethods);
     }
 
-    if(middlewareExported.connectionInitialization){
+    if(middlewareExports.connectionInitialization){
       // console.log("connectionController", connectionController);
-      connectionInitializationMethods(moduleName, middlewareExported.connectionInitialization);
+      connectionInitializationMethods(moduleName, middlewareExports.connectionInitialization);
     }
 
-    if(middlewareExported.connectionClose){
-      connectionCloseMethods(moduleName, middlewareExported.connectionClose);
+    if(middlewareExports.connectionClose){
+      connectionCloseMethods(moduleName, middlewareExports.connectionClose);
     }
+
+    if(middlewareExports.preRouteFilters){
+      preRouteFilterMethods(moduleName, middlewareExports.preRouteFilters);
+    }
+
+    if(middlewareExports.routeMessageOverride && typeof middlewareExports.routeMessageOverride === "function"){
+      routeMessageOverride(moduleName, middlewareExports.routeMessageOverride);
+    }
+
+  }
+
+
+  function preRouteFilterMethods(moduleName, methods){
+    for(var objName in methods){
+      router.preRouteFilters.push(methods[objName]);
+    }
+  }
+
+  function routeMessageOverride(moduleName, method){
+    router.routeMessage = method;
   }
 
 
