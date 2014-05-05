@@ -60,9 +60,9 @@ IncomingCallBack.prototype.callBackError = function(conn, args){
 
 
 IncomingCallBack.prototype.evaluateDestroy = function(){
-  // console.log("CallBack Evaluate Destroy", this.callBackID, this.list);
+  console.log("CallBack Evaluate Destroy", this.callBackID, this.list);
   if(this.total <= 0){
-    // console.log("Deleting CallBack", this.callBackID);
+    console.log("Deleting CallBack", this.callBackID);
     this.destroy();
   }
 };
