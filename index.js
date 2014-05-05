@@ -26,7 +26,8 @@ samsaara = (function Samsaara(module){
   var sockjsOpts = { socketPath: "/echo" };
   var sockjsServer = sockjs.createServer();
 
-  var connectionController,
+  var expressApp,
+      connectionController,
       communication,
       router;
 
@@ -42,6 +43,18 @@ samsaara = (function Samsaara(module){
     stack.push(middleware);
   };
 
+  var addClientFileRoute = module.addClientFileRoute = function(filename, filePath){
+
+    console.log("SETTING UP ROUTE");
+
+    expressApp.get('/samsaara/'+filename, function (req, res){
+      res.sendfile(filePath);
+    });
+  };
+
+  var addClientGetRoute = module.addClientGetRoute = function(route, method){
+    expressApp.get(route, method);
+  };
 
   /**
    * Initialize everything
@@ -56,38 +69,15 @@ samsaara = (function Samsaara(module){
 
       if(app){
 
-        app.get('/samsaara/samsaara.js', function (req, res){
-          res.sendfile(__dirname + '/client/samsaara.js');
-        });
+        expressApp = app;
 
-        app.get('/samsaara/sockjs.js', function (req, res){
-          res.sendfile(__dirname + '/client/sockjs-0.3.min.js');
-        });
+        addClientFileRoute("samsaara.js", __dirname + '/client/samsaara.js');
+        addClientFileRoute("sockjs.js", __dirname + '/client/sockjs-0.3.min.js');
+        addClientFileRoute("ee.js", __dirname + '/client/EventEmitter.min.js');
 
-        app.get('/samsaara/ee.js', function (req, res){
-          res.sendfile(__dirname + '/client/EventEmitter.min.js');
-        });
-
-        app.get('/registerSamsaaraConnection', function (req, res) {
-
-          var registrationToken = req.query.regtoken;
-
-          authentication.retrieveRegistrationToken(registrationToken, function (err, reply){
-            if(err === null){
-              // Can module somehow be supplied by the developer?
-              authentication.getRequestSessionInfo(req.sessionID, function (sessionID, userID){              
-                var keyObject = { sessionID: sessionID, userID: userID, tokenKey: reply };
-                res.send(keyObject);
-              });
-            }
-            else{
-              res.send({ err: err });
-            }
-          });
-        });
       }
       else{
-        throw new Error("You must provide an Express app object so Samsaara can attach its authentication route");
+        throw new Error("You must provide an Express app object so Samsaara can attach its routes");
       }
     }
 
@@ -95,10 +85,6 @@ samsaara = (function Samsaara(module){
     communication = module.communication = require('./lib/communication');     
     router = module.router = require('./lib/router');     
     
-    for (var i = 0; i < stack.length; i++) {
-      initializeMiddleware(stack[i]);
-    } 
-
     var bringToMain = {
       connections: connectionController.connections,
 
@@ -120,6 +106,10 @@ samsaara = (function Samsaara(module){
       callItBackError: communication.callItBackError,
       // requestRegistrationToken: authentication.requestRegistrationToken
     };
+
+    for (var i = 0; i < stack.length; i++) {
+      initializeMiddleware(stack[i]);
+    } 
 
 
     sockjsServer.installHandlers( server, { prefix: sockjsOpts.socketPath } );
@@ -210,6 +200,7 @@ samsaara = (function Samsaara(module){
     for(var objName in methods){
       if(!module.nameSpaces.internal[objName]){
         module.nameSpaces.internal[objName] = methods[objName];
+        // console.log("initializeRemoteMethods adding new remote methods", objName, module.nameSpaces.internal);
       }
       else{
         throw new Error("Remote method: " + objName + " is already an internal method on samsaara");

@@ -49,6 +49,11 @@ var samsaara = (function(samsaara){
     options = opts;
 
     if(opts){
+
+      for(var opt in opts){
+        remoteOptions[opt] = opts[opt];
+      }
+
       if(opts.geoLocation){
         remoteOptions.geoLocation = opts.geoLocation;
       }
@@ -68,6 +73,8 @@ var samsaara = (function(samsaara){
         sockjs_url = opts.socksURL;
       }
     }
+
+
 
     initSock();
 
@@ -196,7 +203,7 @@ var samsaara = (function(samsaara){
             var sessionInfoParsed = JSON.parse(sessionInfo);
             if(sessionInfo.err === undefined){
               navInfo.sessionInfo = {sessionID: sessionInfoParsed.sessionID, userID: sessionInfoParsed.userID};
-              nsFunc("authentication", "login", registrationToken, sessionInfo);
+              nsFunc("internal", "login", JSON.parse(sessionInfo), registrationToken);
             // JSON.stringify( [samsaaraOwner, {login: [registrationToken, sessionInfo]}]
             }
           });
