@@ -38,8 +38,8 @@ function Connection(conn){
 
   this.lastHeartBeat = 0;
 
-  this.userID = 'anonymous' + helper.makeIdAlphaNumerical(5);
-  this.key = helper.makeIdAlphaNumerical(20) + conn.id;
+  this.userID = 'anonymous' + helper.makePseudoRandomID();
+  this.key = helper.makePseudoRandomID() + conn.id;
   this.token = helper.makeUniqueHash('sha1', this.key, [this.userID]);
 
   conn.on('close', function (message){
