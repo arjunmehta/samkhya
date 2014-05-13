@@ -38,22 +38,22 @@ IncomingCallBack.prototype.addConnection = function(connID){
 };
 
 
-IncomingCallBack.prototype.executeCallBack = function(conn, args){
-  if(this.list[conn.id] !== undefined){
+IncomingCallBack.prototype.executeCallBack = function(executorID, executor, args){
+  if(this.list[executorID] !== undefined){
     // console.log("CallBack Executing", this.callBackID, this.total, this.list);
-    this.callBack.apply(conn, args);
+    this.callBack.apply(executor, args);
     this.total--;
-    delete this.list[conn.id];
+    delete this.list[executorID];
     this.evaluateDestroy();
   }
 };
 
 
-IncomingCallBack.prototype.callBackError = function(conn, args){
-  if(this.list[conn.id] !== undefined){
+IncomingCallBack.prototype.callBackError = function(executorID, executor, args){
+  if(this.list[executorID] !== undefined){
     // console.log("CallBack Error", this.callBackID, args);
     this.total--;
-    delete this.list[conn.id];
+    delete this.list[executorID];
     this.evaluateDestroy();
   }
 };

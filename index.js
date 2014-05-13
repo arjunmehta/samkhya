@@ -41,6 +41,7 @@ samsaara = (function Samsaara(module){
   module.use = function(middleware){
     // console.log("NEW MIDDLEWARE", middleware);
     stack.push(middleware);
+    return this;
   };
 
   var addClientFileRoute = module.addClientFileRoute = function(filename, filePath){
@@ -111,11 +112,10 @@ samsaara = (function Samsaara(module){
       initializeMiddleware(stack[i]);
     } 
 
-
     sockjsServer.installHandlers( server, { prefix: sockjsOpts.socketPath } );
 
-    sockjsServer.on('connection', function (conn){
-      connectionController.createNewConnection(conn);
+    sockjsServer.on('connection', function (socketConnection){
+      connectionController.createNewConnection(socketConnection);
     });
 
   };
@@ -129,9 +129,11 @@ samsaara = (function Samsaara(module){
 
     var middlewareExports = middleware(module);
     var moduleName = middlewareExports.name;
-    var objName;
+    var objName;    
 
-    console.log("Module", middlewareExports.name, "Loaded");
+    /**
+     * Gives samsaara a namespace for the module. (ie. samsaara.groups, samsaara.authentication etc.)
+     */
 
     if(moduleName){
       if(!module[moduleName]){
@@ -145,6 +147,11 @@ samsaara = (function Samsaara(module){
 
     if(middlewareExports.remoteMethods){
       initializeRemoteMethods(moduleName, middlewareExports.remoteMethods);
+    }
+
+    if(middlewareExports.connectionPreInitialization){
+      // console.log("connectionController", connectionController);
+      connectionPreInitializationMethods(moduleName, middlewareExports.connectionPreInitialization);
     }
 
     if(middlewareExports.connectionInitialization){
@@ -164,8 +171,13 @@ samsaara = (function Samsaara(module){
       routeMessageOverride(moduleName, middlewareExports.routeMessageOverride);
     }
 
+    console.log("Samsaara middleware module", middlewareExports.name, "...Loaded");
+
   }
 
+  /**
+   * Adds methods to execute when a new message comes in before it is routed to a method or process (ipc).
+   */
 
   function preRouteFilterMethods(moduleName, methods){
     for(var objName in methods){
@@ -173,10 +185,18 @@ samsaara = (function Samsaara(module){
     }
   }
 
+  /**
+   * Overrides the router.js routeMessage method. Only one middleware can do this at a time (usually ipc).
+   */
+
   function routeMessageOverride(moduleName, method){
     router.routeMessage = method;
   }
 
+  /**
+   * Adds new methods in the middleware to the core samsaara object as well as the
+   * module's namespace.
+   */
 
   function initializeFoundationMethods(moduleName, methods){
 
@@ -194,6 +214,9 @@ samsaara = (function Samsaara(module){
     }
   }
 
+  /**
+   * Adds remotely accessible methods to samsaara's internal namespace. (Should be configurable)
+   */
 
   function initializeRemoteMethods(moduleName, methods){
       
@@ -208,6 +231,23 @@ samsaara = (function Samsaara(module){
     }     
   }
 
+
+  /**
+   * Adds methods to execute when a new connection is formed.
+   */
+
+  function connectionPreInitializationMethods(moduleName, methods){
+      
+    for(var objName in methods){
+      // console.log("The Connection Controller Object", connectionController);
+      connectionController.Connection.prototype.preInitializationMethods.push(methods[objName]);
+    }
+  }
+
+  /**
+   * Adds methods to execute when a new connection is formed.
+   */
+
   function connectionInitializationMethods(moduleName, methods){
       
     for(var objName in methods){
@@ -215,6 +255,10 @@ samsaara = (function Samsaara(module){
       connectionController.Connection.prototype.initializationMethods.push(methods[objName]);
     }
   }
+
+  /**
+   * Adds methods to execute when a connection is closed.
+   */
 
   function connectionCloseMethods(moduleName, methods){
       

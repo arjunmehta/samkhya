@@ -19,26 +19,42 @@ var samsaara = (function(samsaara){
       lastBeat = 0, heartBeatBeat = 0;
 
   var functionQueue = [];
+
   var outgoingCallBacks = {};
   var incomingCallBacks = {};
+
+  var initializationMethods = [];
   var internalMethods = {};
   var exposedMethods = {};
+  var messageRoutes = {};
+  var headerList = {};
 
-  var navInfo = {
-    // browserName: BrowserDetect.browser,
-    // browserVersion: BrowserDetect.version,
-    // OSName: BrowserDetect.OS,
-    userAgent: navigator.userAgent,
-    platform: navigator.platform,
-    vendor: navigator.vendor,
-    language: navigator.language,
-    windowWidth: window.innerWidth,
-    windowHeight: window.innerHeight,
-    pixelRatio: window.devicePixelRatio || 1,
-    timeOffset: 0,
-    sessionInfo: {id: "anon" + makeIdAlpha(15), name: "user" + makeIdAlpha(15)}
+  var attributes = {initializedAttributes : {init: false} };
+
+  attributes.force = function(attributeName){
+    attributes.initializedAttributes[attributeName] = false;
   };
 
+  attributes.initializedAttribute = function(attributeName){
+
+    console.log("Initialized Attribute", attributeName);
+
+    attributes.initializedAttributes[attributeName] = true;
+    if(attributes.allInitialized() === true){
+      preinitialize();
+    }
+  };
+
+  attributes.allInitialized = function(){
+    for(var attr in attributes.initializedAttributes){
+      if(attributes.initializedAttributes[attr] === false) return false;
+    }
+    return true;
+  };
+
+  attributes.updateHeaderList = function(headerKey, headerValue){
+    headerList[headerKey] = headerValue;
+  };
 
   /**
    * Public Methods
@@ -49,35 +65,14 @@ var samsaara = (function(samsaara){
     options = opts;
 
     if(opts){
-
       for(var opt in opts){
         remoteOptions[opt] = opts[opt];
-      }
-
-      if(opts.geoLocation){
-        remoteOptions.geoLocation = opts.geoLocation;
-      }
-      if(opts.timeOffset){
-        remoteOptions.timeOffset = opts.timeOffset;
-      }
-      if(opts.groups){
-        remoteOptions.groups = opts.groups;
-      }
-      if(opts.windowSize){
-        remoteOptions.windowSize = opts.windowSize;
-        window.onresize = function(e){
-          send( {ns: "internal", func: "windowResize", args:[window.innerWidth, window.innerHeight] } );
-        };
-      }
+      } 
       if(opts.socksURL){
         sockjs_url = opts.socksURL;
       }
     }
-
-
-
     initSock();
-
   };
 
   samsaara.expose = function(set){
@@ -94,19 +89,34 @@ var samsaara = (function(samsaara){
 
   samsaara.use = function(module){
 
-    // console.log("Trying to use", module);
+    if(typeof module === "function"){
+      module = module(samsaara, attributes);
+    }
 
-    for(var methodName in module.internalMethods){
+    console.log("Trying to use", module);
 
-      console.log("Trying to use:", methodName);
-      if(!internalMethods[methodName]){
-        internalMethods[methodName] = module.internalMethods[methodName];
+    if(module.internalMethods){
+      for(var methodName in module.internalMethods){
+        if(!internalMethods[methodName]){
+          internalMethods[methodName] = module.internalMethods[methodName];
+        }
       }
     }
+
+    if(module.messageRoutes){
+      for(var routeName in module.messageRoutes){
+        if(!messageRoutes[routeName]){
+          messageRoutes[routeName] = module.messageRoutes[routeName];
+        }
+      }
+    }
+
+    if(module.initializationMethods){
+      for(var i=0; i < module.initializationMethods.length; i++){
+        initializationMethods.push(module.initializationMethods[i]);
+      }
+    }    
   };
-
-
-
 
 
   /**
@@ -130,6 +140,54 @@ var samsaara = (function(samsaara){
     processAndSend(2, packet, args, samsaaraOwner);
   };
 
+
+  /**
+   * Private Methods
+   **/
+
+  function sendRaw(message){
+    console.log("SENDING",message);
+    lastBeat = heartBeatBeat;
+    sockjs.send(message);
+  }
+
+  function sendRawWithHeaders(owner, customHeaderList, message){
+    var header = owner;
+
+    for(var key in headerList){
+      header += ":" + key + ":" + headerList[key];
+    }
+    for(var customKey in customHeaderList){
+      header += ":" + customKey + ":" + customHeaderList[customKey];
+    }
+    header += "::";
+
+    sendRaw(header + message);
+  }
+
+  function send(packetJSON, owner, callBack){
+
+    if(typeof callBack === "function"){
+      var callBackID = makeIdAlpha(12);
+      incomingCallBacks[callBackID] = {callBack: callBack};
+      packetJSON.callBack = callBackID;
+    }
+
+    if(preinitialized === true){
+      // packetJSON.token = samsaaraToken;
+      // if(packetJSON.owner !== undefined && packetJSON.owner !== samsaaraOwner)
+      sendRawWithHeaders( samsaaraOwner, {}, JSON.stringify(packetJSON) );  //    +":"+samsaaraToken+"::"
+    }
+    else{
+      functionQueue.push( packetJSON );
+    }
+  }
+
+  function nsSend(ns, packet, callBack){
+    packet.ns = ns;
+    send(packet, callBack);
+  }
+
   function processAndSend(offset, packet, args, owner){
     if(args.length > offset){
       packet.args = [];
@@ -150,66 +208,18 @@ var samsaara = (function(samsaara){
   }
 
 
-
-
-
-  /**
-   * Private Methods
-   **/
-
-  function sendRaw(message){
-    console.log("SENDING",message);
-    lastBeat = heartBeatBeat;
-    sockjs.send(message);
-  }
-
-  function send(packetJSON, owner, callBack){
-
-    if(typeof callBack === "function"){
-      var callBackID = makeIdAlpha(12);
-      incomingCallBacks[callBackID] = {callBack: callBack};
-      packetJSON.callBack = callBackID;
-    }
-
-    if(preinitialized === true){
-      // packetJSON.token = samsaaraToken;
-      // if(packetJSON.owner !== undefined && packetJSON.owner !== samsaaraOwner)
-      sendRaw( owner+"::"+JSON.stringify(packetJSON) );  //    +":"+samsaaraToken+"::"
-    }
-    else{
-      functionQueue.push( packetJSON );
-    }
-  }
-
-  function nsSend(ns, packet, callBack){
-    packet.ns = ns;
-    send(packet, callBack);
-  }
-
-
   function initSock(){
 
     sockjs = new SockJS(sockjs_url);
 
     sockjs.onopen = function(){
-      console.log('[*] open', sockjs.protocol);
+      console.log('[*] samsaara socket open', sockjs.protocol);
 
-      sockConnectionTimerTime = 0;      
+      sockConnectionTimerTime = 0;
 
-      if(options && options.session){
-        // console.log("*******************ATTEMPTING TO LOG IN SESSION");
-        send({ns: "internal", func: "requestRegistrationToken"}, samsaaraOwner, function (err, registrationToken){
-          httpGet("/registerSamsaaraConnection?regtoken=" + registrationToken, function (sessionInfo){
-            var sessionInfoParsed = JSON.parse(sessionInfo);
-            if(sessionInfo.err === undefined){
-              navInfo.sessionInfo = {sessionID: sessionInfoParsed.sessionID, userID: sessionInfoParsed.userID};
-              nsFunc("internal", "login", JSON.parse(sessionInfo), registrationToken);
-            // JSON.stringify( [samsaaraOwner, {login: [registrationToken, sessionInfo]}]
-            }
-          });
-        });
+      for(var i=0; i<initializationMethods.length; i++){
+        initializationMethods[i]();
       }
-      
     };
 
     sockjs.onmessage = function(e){
@@ -225,7 +235,7 @@ var samsaara = (function(samsaara){
     };
 
     sockjs.onclose = function(e){
-      console.log('[*] close');
+      console.log('[*] samsaara socket close');
       preinitialized = false;
 
       sockConnectionTimer = setTimeout(function(){
@@ -248,25 +258,14 @@ var samsaara = (function(samsaara){
   function evalMessage(messageParsed){
 
     var messageObj = messageParsed[1];
-    messageObj.owner = messageParsed[0];
 
-    if(messageObj.samsaaraHeartBeat){
-      clearInterval(heartBeat);
-      heartBeat = setInterval(heartBeater, messageObj.samsaaraHeartBeat);
+    if(messageRoutes[messageParsed[0]] !== undefined){
+      messageRoutes[messageParsed[0]](messageObj);
     }
-    if(messageObj.samsaaraID !== undefined){
-      samsaaraID = messageObj.samsaaraID;
-      console.log("CONNECTED AS:" + samsaaraID);
-    }
-    if(messageObj.samsaaraOwner !== undefined){
-      samsaaraOwner = messageObj.samsaaraOwner;
-      sendRaw( samsaaraOwner+"::"+JSON.stringify({opts: remoteOptions}) );
-      console.log("samsaaraOwner:" + samsaaraOwner);
-    }
-    if(messageObj.samsaaraToken !== undefined){
-      preinitializeWithToken(messageObj.samsaaraToken);
-    }
-
+    else{
+      messageObj.owner = messageParsed[0];
+    }    
+    
     if(messageObj.func !== undefined){
       if(exposedMethods[messageObj.func] !== undefined){
         execute(exposedMethods[messageObj.func], messageObj);
@@ -274,7 +273,7 @@ var samsaara = (function(samsaara){
       else{
         console.log("Samsaara Error:", messageObj.func, "Is not a valid property of this Samsaara Object", messageObj);
         if(messageObj.callBack){
-          send({ns: "internal", func:  "callItBackError", args: [messageObj.callBack, messageObj.owner, ["ERROR: Invalid Object on Client"]]}, messageObj.owner);
+          send({ns: "internal", func: "callItBackError", args: [messageObj.callBack, messageObj.owner, ["ERROR: Invalid Object on Client"]]}, messageObj.owner);
         }
       }
     }
@@ -289,9 +288,26 @@ var samsaara = (function(samsaara){
     }
   }
 
-  function preinitializeWithToken(token){
-    samsaaraToken = token;
-    console.log("Token Received:", samsaaraToken);
+
+  messageRoutes.init = function(messageObj){
+    if(messageObj.samsaaraHeartBeat){
+      clearInterval(heartBeat);
+      heartBeat = setInterval(heartBeater, messageObj.samsaaraHeartBeat);
+    }
+    if(messageObj.samsaaraID !== undefined){
+      samsaaraID = messageObj.samsaaraID;
+      console.log("CONNECTED AS:" + samsaaraID);
+    }
+    if(messageObj.samsaaraOwner !== undefined){
+      samsaaraOwner = messageObj.samsaaraOwner;
+      sendRawWithHeaders( samsaaraOwner, {}, JSON.stringify({opts: remoteOptions}) );
+      console.log("samsaaraOwner:" + samsaaraOwner);
+    }
+
+    attributes.initializedAttribute("init");
+  };
+
+  function preinitialize(){
 
     if(preinitialized === false){
       preinitialized = true;
@@ -305,6 +321,7 @@ var samsaara = (function(samsaara){
   }
 
   function execute(func, messageObj){
+
     if(messageObj.callBack !== undefined){
 
       var callBackID = messageObj.callBack;
@@ -346,25 +363,12 @@ var samsaara = (function(samsaara){
   };
 
   internalMethods.reportError = function(code, message){
-    console.log("ARGYLE SERVER ERROR:", code, message);
+    console.log("SAMSAARA SERVER ERROR:", code, message);
   };
 
   internalMethods.samsaaraInitialized = function(initialized, callBack){
     samsaara.emitEvent("initialized");
     if(typeof callBack === "function") callBack(true);
-  };
-
-  internalMethods.updateToken = function(oldToken, newToken, callBack){
-    console.log("UPDATING TOKEN", oldToken, newToken);
-
-    if(samsaaraToken === oldToken){
-      samsaara.emitEvent("authenticated", [navInfo.sessionInfo.userID]);
-      samsaaraToken = newToken;
-      if(typeof callBack === "function") callBack(newToken);
-    }
-    else{
-      if(typeof callBack === "function") callBack(false);
-    }
   };
 
 
@@ -381,223 +385,22 @@ var samsaara = (function(samsaara){
     return text;
   }
 
-  function httpGet(theUrl, callBack){
-    var xmlHttp = null;
-
-    xmlHttp = new XMLHttpRequest();
-    xmlHttp.open( "GET", theUrl, false );
-    xmlHttp.send( null );
-
-    if(callBack) callBack(xmlHttp.responseText);
-    else return xmlHttp.responseText;
-  }
-
-  //Browser Detect Script: http://www.quirksmode.org/js/detect.html
-
-  var BrowserDetect = {
-    init: function () {
-      this.browser = this.searchString(this.dataBrowser) || "An unknown browser";
-      this.version = this.searchVersion(navigator.userAgent) || this.searchVersion(navigator.appVersion) || "an unknown version";
-      this.OS = this.searchString(this.dataOS) || "an unknown OS";
-    },
-    searchString: function (data) {
-      for (var i=0;i<data.length;i++)  {
-        var dataString = data[i].string;
-        var dataProp = data[i].prop;
-        this.versionSearchString = data[i].versionSearch || data[i].identity;
-        if (dataString) {
-          if (dataString.indexOf(data[i].subString) != -1)
-            return data[i].identity;
-        }
-        else if (dataProp)
-          return data[i].identity;
-      }
-    },
-    searchVersion: function (dataString) {
-      var index = dataString.indexOf(this.versionSearchString);
-      if (index == -1) return;
-      return parseFloat(dataString.substring(index+this.versionSearchString.length+1));
-    },
-    dataBrowser: [
-      {
-        string: navigator.userAgent,
-        subString: "Chrome",
-        identity: "Chrome"
-      },
-      {
-         string: navigator.userAgent,
-        subString: "OmniWeb",
-        versionSearch: "OmniWeb/",
-        identity: "OmniWeb"
-      },
-      {
-        string: navigator.vendor,
-        subString: "Apple",
-        identity: "Safari",
-        versionSearch: "Version"
-      },
-      {
-        prop: window.opera,
-        identity: "Opera",
-        versionSearch: "Version"
-      },
-      {
-        string: navigator.vendor,
-        subString: "iCab",
-        identity: "iCab"
-      },
-      {
-        string: navigator.vendor,
-        subString: "KDE",
-        identity: "Konqueror"
-      },
-      {
-        string: navigator.userAgent,
-        subString: "Firefox",
-        identity: "Firefox"
-      },
-      {
-        string: navigator.vendor,
-        subString: "Camino",
-        identity: "Camino"
-      },
-      {    // for newer Netscapes (6+)
-        string: navigator.userAgent,
-        subString: "Netscape",
-        identity: "Netscape"
-      },
-      {
-        string: navigator.userAgent,
-        subString: "MSIE",
-        identity: "Explorer",
-        versionSearch: "MSIE"
-      },
-      {
-        string: navigator.userAgent,
-        subString: "Gecko",
-        identity: "Mozilla",
-        versionSearch: "rv"
-      },
-      {     // for older Netscapes (4-)
-        string: navigator.userAgent,
-        subString: "Mozilla",
-        identity: "Netscape",
-        versionSearch: "Mozilla"
-      }
-    ],
-    dataOS : [
-      {
-        string: navigator.platform,
-        subString: "Win",
-        identity: "Windows"
-      },
-      {
-        string: navigator.platform,
-        subString: "Mac",
-        identity: "Mac"
-      },
-      {
-        string: navigator.userAgent,
-        subString: "iPhone",
-        identity: "iPhone/iPod"
-      },
-      {
-        string: navigator.platform,
-        subString: "Linux",
-        identity: "Linux"
-      }
-    ]
-  };
-
-  BrowserDetect.init();
-
   return samsaara;
 
 }(this.samsaara = this.samsaara || {}));
 
 
-var testTime = (function(module){
-
-  module.internalMethods = {
-    testTime: function(stopTime, serverTime, callBack){
-      var serverOffset = serverTime - stopTime;
-      var theTime = new Date().getTime();
-      var errorDifference = theTime - serverOffset;
-
-      if(typeof callBack === "function") callBack(serverTime, theTime, errorDifference);
-    },
-    updateOffset: function (timeOffset){
-      console.log("Samsaara: updateOffset():", timeOffset);
-      samsaara.timeOffset = timeOffset;
-    }
-  };
-
-  module.initializationMethods = {};
-  module.closeMethods = {};
-
-  return module;
-
-}(this.testTime = this.testTime || {}));
 
 
 
-var navInfo = (function(module){
 
-  module.internalMethods = {
-    getNavInfo: function(callBack){
-      if(typeof callBack === "function") callBack( {empty: 0} );
-    }
-  };
-
-  module.initializationMethods = {};
-  module.closeMethods = {};
-
-  return module;
-
-}(this.navInfo = this.navInfo || {}));
-
-var groups = (function(module){
-
-  module.internalMethods = {
-    addToGroups: function(callBack){
-      if(typeof callBack === "function") callBack( options.groups );
-    }
-  };
-
-  module.initializationMethods = {};
-  module.closeMethods = {};
-
-  return module;
-
-}(this.groups = this.groups || {}));
-
-
-var geoLocation = (function(module){
-
-  module.internalMethods = {
-
-    getGeoLocation: function(callBack){
-      if (navigator.geolocation){
-        navigator.geolocation.getCurrentPosition(function (position){
-          samsaara.geoposition = position;
-          if(typeof callBack === "function") callBack(null, position);
-        }, function(err){
-          if(typeof callBack === "function") callBack(err, null);
-        });
-      }
-    }
-
-  };
-
-  module.initializationMethods = {};
-  module.closeMethods = {};
-
-  return module;
-
-}(this.geoLocation = this.geoLocation || {}));
 
 
 var windowSize = (function(module){
+
+  window.onresize = function(e){
+    samsaara.nsFunc("internal", "windowResize", window.innerWidth, window.innerHeight);
+  };
 
   module.internalMethods = {
     getWindowSize: function(callBack){
@@ -612,13 +415,129 @@ var windowSize = (function(module){
 
 }(this.windowSize = this.windowSize || {}));
 
-console.log("windowSize", windowSize);
 
-samsaara.use(windowSize);
-samsaara.use(geoLocation);
-samsaara.use(testTime);
-samsaara.use(navInfo);
-samsaara.use(groups);
+
+
+
+ //Browser Detect Script: http://www.quirksmode.org/js/detect.html
+
+// var BrowserDetect = {
+//   init: function () {
+//     this.browser = this.searchString(this.dataBrowser) || "An unknown browser";
+//     this.version = this.searchVersion(navigator.userAgent) || this.searchVersion(navigator.appVersion) || "an unknown version";
+//     this.OS = this.searchString(this.dataOS) || "an unknown OS";
+//   },
+//   searchString: function (data) {
+//     for (var i=0;i<data.length;i++)  {
+//       var dataString = data[i].string;
+//       var dataProp = data[i].prop;
+//       this.versionSearchString = data[i].versionSearch || data[i].identity;
+//       if (dataString) {
+//         if (dataString.indexOf(data[i].subString) != -1)
+//           return data[i].identity;
+//       }
+//       else if (dataProp)
+//         return data[i].identity;
+//     }
+//   },
+//   searchVersion: function (dataString) {
+//     var index = dataString.indexOf(this.versionSearchString);
+//     if (index == -1) return;
+//     return parseFloat(dataString.substring(index+this.versionSearchString.length+1));
+//   },
+//   dataBrowser: [
+//     {
+//       string: navigator.userAgent,
+//       subString: "Chrome",
+//       identity: "Chrome"
+//     },
+//     {
+//        string: navigator.userAgent,
+//       subString: "OmniWeb",
+//       versionSearch: "OmniWeb/",
+//       identity: "OmniWeb"
+//     },
+//     {
+//       string: navigator.vendor,
+//       subString: "Apple",
+//       identity: "Safari",
+//       versionSearch: "Version"
+//     },
+//     {
+//       prop: window.opera,
+//       identity: "Opera",
+//       versionSearch: "Version"
+//     },
+//     {
+//       string: navigator.vendor,
+//       subString: "iCab",
+//       identity: "iCab"
+//     },
+//     {
+//       string: navigator.vendor,
+//       subString: "KDE",
+//       identity: "Konqueror"
+//     },
+//     {
+//       string: navigator.userAgent,
+//       subString: "Firefox",
+//       identity: "Firefox"
+//     },
+//     {
+//       string: navigator.vendor,
+//       subString: "Camino",
+//       identity: "Camino"
+//     },
+//     {    // for newer Netscapes (6+)
+//       string: navigator.userAgent,
+//       subString: "Netscape",
+//       identity: "Netscape"
+//     },
+//     {
+//       string: navigator.userAgent,
+//       subString: "MSIE",
+//       identity: "Explorer",
+//       versionSearch: "MSIE"
+//     },
+//     {
+//       string: navigator.userAgent,
+//       subString: "Gecko",
+//       identity: "Mozilla",
+//       versionSearch: "rv"
+//     },
+//     {     // for older Netscapes (4-)
+//       string: navigator.userAgent,
+//       subString: "Mozilla",
+//       identity: "Netscape",
+//       versionSearch: "Mozilla"
+//     }
+//   ],
+//   dataOS : [
+//     {
+//       string: navigator.platform,
+//       subString: "Win",
+//       identity: "Windows"
+//     },
+//     {
+//       string: navigator.platform,
+//       subString: "Mac",
+//       identity: "Mac"
+//     },
+//     {
+//       string: navigator.userAgent,
+//       subString: "iPhone",
+//       identity: "iPhone/iPod"
+//     },
+//     {
+//       string: navigator.platform,
+//       subString: "Linux",
+//       identity: "Linux"
+//     }
+//   ]
+// };
+
+// BrowserDetect.init();
+
 
 
 function getScreenInfo(){
