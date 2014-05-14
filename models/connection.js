@@ -6,12 +6,9 @@
 
 // var memwatch = require('memwatch');
 
-
-var helper = require('../lib/helper');
-
-var path = require("path");
-var log = require("../lib/log");
-var moduleName = path.basename(module.filename);
+var debug = require('debug')('samsaara:connection:main');
+var debugInitialization = require('debug')('samsaara:connection:initialization');
+var debugCommunication = require('debug')('samsaara:connection:communication');
 
 var samsaara = require('../index.js');
 var config = require('../lib/config');
@@ -93,7 +90,7 @@ Connection.prototype.handleMessage = function(raw_message){
 
   switch(raw_message){
     case "H":
-      console.log("Heartbeat...", this.id, this.lastHeartBeat, connectionController.globalBeat);
+      debugCommunication("Heartbeat...", this.id, this.lastHeartBeat, connectionController.globalBeat);
       break;
     default:
       router.newConnectionMessage(this, raw_message);
@@ -106,7 +103,7 @@ Connection.prototype.handleMessage = function(raw_message){
  */
 
 Connection.prototype.write = function(message){
-  // console.log(process.pid.toString(), "NATIVE write on", "NATIVE CONNECTION WRITING");
+  // debugCommunication(config.uuid, "NATIVE write on", this.id);
   this.conn.write(message);
 };
 
@@ -127,10 +124,10 @@ Connection.prototype.closeConnection = function(message){
   }
 
   this.conn.removeAllListeners();
-  
+
   delete connections[connID];
 
-  log.warn(" ", config.uuid, moduleName, "CLOSING: ", connID, message);
+  // debug(config.uuid, "CLOSING:", connID, message);
 
   ////////
   // var diff = hd.end();
@@ -144,7 +141,7 @@ Connection.prototype.closeConnection = function(message){
 
 Connection.prototype.initialize = function(opts){
 
-  console.log("Trying To Initialize Connection...", this.id);
+  debugInitialization("Trying To Initialize Connection...", this.id);
 
   opts = opts || {};
 
@@ -167,9 +164,10 @@ Connection.prototype.initialize = function(opts){
 Connection.prototype.completeInitialization = function(){
   if(this.initialized === false){
     this.initialized = true;
-    console.log(config.uuid, this.id, "Initialized");
+
+    debugInitialization(config.uuid, this.id, "Initialized");
+
     communication.sendToClient(this.id, {internal: "samsaaraInitialized", args: [true]}, function (confirmation){
-      // this.connection.initialized = true;
       samsaara.emit('initialized', this.connection);
     });
   }
@@ -193,9 +191,9 @@ InitializedAttributes.prototype.force = function(attribute){
 
 InitializedAttributes.prototype.initialized = function(err, attribute){
 
-  console.log("...Initialized attribute", attribute, this.forced);
+  debugInitialization("...Initialized attribute", attribute, this.forced);
 
-  if(err) console.log(err);
+  if(err) debugInitialization(err);
 
   if(this.forced[attribute] !== undefined){
     this.forced[attribute] = true;
@@ -210,7 +208,6 @@ InitializedAttributes.prototype.allInitialized = function(){
   var forced = this.forced;
   if(this.ready){
     for(var attr in forced){
-      // console.log("////////////////////////////////CHECKING FORCED", attr, forced[attr], this.forced);
       if (forced[attr] === false) return false;
     }
   }

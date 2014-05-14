@@ -4,11 +4,12 @@
  * MIT Licensed
  */
 
+var debugManagement = require('debug')('samsaara:callback:management');
+var debugConnections = require('debug')('samsaara:callback:connections');
+
 exports = module.exports = IncomingCallBack;
 
-var helper = require('../lib/helper.js');
 var config = require('../lib/config.js');
-
 var incomingCallBacks = require('../lib/communication.js').incomingCallBacks;
 
 var initOffset = 1000;
@@ -32,7 +33,7 @@ IncomingCallBack.prototype.addConnections = function(connArray){
 
 
 IncomingCallBack.prototype.addConnection = function(connID){
-  // console.log("ADDING WAITING CALLBACK CONNECTION", connID);
+  // debugConnections("ADDING WAITING CALLBACK CONNECTION", connID);
   this.list[connID] = true;
   this.total++;
 };
@@ -40,7 +41,7 @@ IncomingCallBack.prototype.addConnection = function(connID){
 
 IncomingCallBack.prototype.executeCallBack = function(executorID, executor, args){
   if(this.list[executorID] !== undefined){
-    // console.log("CallBack Executing", this.callBackID, this.total, this.list);
+    // debug("CallBack Executing", this.callBackID, this.total, this.list);
     this.callBack.apply(executor, args);
     this.total--;
     delete this.list[executorID];
@@ -51,7 +52,7 @@ IncomingCallBack.prototype.executeCallBack = function(executorID, executor, args
 
 IncomingCallBack.prototype.callBackError = function(executorID, executor, args){
   if(this.list[executorID] !== undefined){
-    // console.log("CallBack Error", this.callBackID, args);
+    // debug("CallBack Error", this.callBackID, args);
     this.total--;
     delete this.list[executorID];
     this.evaluateDestroy();
@@ -60,9 +61,9 @@ IncomingCallBack.prototype.callBackError = function(executorID, executor, args){
 
 
 IncomingCallBack.prototype.evaluateDestroy = function(){
-  console.log("CallBack Evaluate Destroy", this.callBackID, this.list);
+  debugManagement("CallBack Evaluate Destroy", this.callBackID, this.list);
   if(this.total <= 0){
-    console.log("Deleting CallBack", this.callBackID);
+    debugManagement("Deleting CallBack", this.callBackID);
     this.destroy();
   }
 };
