@@ -5,7 +5,7 @@
  */
 
 
-var debug = require('debug')('samsaara-index');
+var debug = require('debug')('samsaara:index');
 
 var fs = require('fs');
 var UglifyJS = require("uglify-js");
@@ -43,7 +43,6 @@ samsaara = (function Samsaara(module){
    */
 
   module.use = function(newMiddleware){
-    // console.log("NEW MIDDLEWARE", newMiddleware);
     stack.push(newMiddleware);
     return this;
   };
@@ -77,7 +76,7 @@ samsaara = (function Samsaara(module){
     if(app){
       expressApp = app;
 
-      addClientFileRoute("samsaara.js", __dirname + '/client/samsaara.js');
+      addClientFileRoute("samsaaraCore.js", __dirname + '/client/samsaara.js');
       addClientFileRoute("sockjs.js", __dirname + '/client/sockjs-0.3.min.js');
       addClientFileRoute("ee.js", __dirname + '/client/EventEmitter.min.js');
 
