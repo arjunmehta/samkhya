@@ -4,6 +4,9 @@
  * MIT Licensed
  */
 
+var fs = require('fs');
+var UglifyJS = require("uglify-js");
+
 var log = require("./lib/log");
 var helper = require('./lib/helper');
 
@@ -32,6 +35,7 @@ samsaara = (function Samsaara(module){
       router;
 
   var stack = [];
+  var clientStack = [];
 
 
   /**
@@ -53,6 +57,10 @@ samsaara = (function Samsaara(module){
     });
   };
 
+  var addClientScript = module.addClientScript = function(filePath){
+    clientStack.push(filePath);
+  };
+
   var addClientGetRoute = module.addClientGetRoute = function(route, method){
     expressApp.get(route, method);
   };
@@ -64,22 +72,24 @@ samsaara = (function Samsaara(module){
   module.initialize = function (server, app, opts){
 
     if(opts){
-
       config.options = opts;
       sockjsOpts.socketPath = opts.socketPath || "/echo";
+    }
 
-      if(app){
+    if(app){
+      expressApp = app;
 
-        expressApp = app;
+      // addClientFileRoute("samsaara.js", __dirname + '/client/samsaara.js');
+      // addClientFileRoute("sockjs.js", __dirname + '/client/sockjs-0.3.min.js');
+      // addClientFileRoute("ee.js", __dirname + '/client/EventEmitter.min.js');
 
-        addClientFileRoute("samsaara.js", __dirname + '/client/samsaara.js');
-        addClientFileRoute("sockjs.js", __dirname + '/client/sockjs-0.3.min.js');
-        addClientFileRoute("ee.js", __dirname + '/client/EventEmitter.min.js');
+      addClientScript(__dirname + '/client/EventEmitter.min.js');
+      addClientScript(__dirname + '/client/sockjs-0.3.min.js');
+      addClientScript(__dirname + '/client/samsaara.js');
 
-      }
-      else{
-        throw new Error("You must provide an Express app object so Samsaara can attach its routes");
-      }
+    }
+    else{
+      throw new Error("You must provide an Express app object so Samsaara can attach its routes");
     }
 
     connectionController = module.connectionController = require('./lib/connectionController');  
@@ -110,13 +120,27 @@ samsaara = (function Samsaara(module){
 
     for (var i = 0; i < stack.length; i++) {
       initializeMiddleware(stack[i]);
-    } 
+    }
 
-    sockjsServer.installHandlers( server, { prefix: sockjsOpts.socketPath } );
+    var clientScriptCombined = UglifyJS.minify(clientStack);
+    fs.writeFile(__dirname + '/client/samsaara.min.js', clientScriptCombined.code, function (err){
+      if(err) {
+        console.log(err);
+      } else {
+        console.log("The file was saved!");
+      }
 
-    sockjsServer.on('connection', function (socketConnection){
-      connectionController.createNewConnection(socketConnection);
-    });
+      addClientFileRoute("samsaara.js", __dirname + '/client/samsaara.min.js');
+
+      sockjsServer.installHandlers( server, { prefix: sockjsOpts.socketPath } );
+
+      sockjsServer.on('connection', function (socketConnection){
+        connectionController.createNewConnection(socketConnection);
+      });
+
+    }); 
+
+
 
   };
 
@@ -147,6 +171,10 @@ samsaara = (function Samsaara(module){
 
     if(middlewareExports.remoteMethods){
       initializeRemoteMethods(moduleName, middlewareExports.remoteMethods);
+    }
+
+    if(middlewareExports.clientScript){
+      initializeClientScript(middlewareExports.clientScript);
     }
 
     if(middlewareExports.connectionPreInitialization){
@@ -191,6 +219,22 @@ samsaara = (function Samsaara(module){
 
   function routeMessageOverride(moduleName, method){
     router.routeMessage = method;
+  }
+
+  /**
+   * Adds client script files for minifying.
+   */
+
+  function initializeClientScript(script){
+
+    if(typeof script === "string"){
+      clientStack.push(script);
+    }
+    else{
+      for(var i=0; i<script.length; i++){
+        clientStack.push(script);
+      }
+    }
   }
 
   /**

@@ -1,7 +1,7 @@
 {
   "name": "samsaara",
   "private": true,
-  "version": "0.0.2",
+  "version": "0.1.0",
   "description": "A comprehensive module to create, maintain and manage active socket connections.",
   "keywords": [
     "sockjs",
@@ -21,8 +21,7 @@
   "dependencies": {
     "sockjs": "0.3.7",
     "winston": "*",
-    "colors": "*",
-    "uuid": "~1.4.0"
+    "uglify-js": "*"
   },
   "devDependencies": {
     "should": ">= 0.0.2"
@@ -30,15 +29,15 @@
   "scripts": {
     "test": "make test"
   },
+  "license": "MIT",
   "main": "index",
   "engines": {
     "node": ">= 0.6.x"
   },
-  "readme": "",
   "readmeFilename": "Readme.md",
   "bugs": {
     "url": "https://github.com/arjunmehta/node-samsaara/issues"
   },
-  "_id": "samsaara@0.0.2",
+  "_id": "samsaara@0.1.0",
   "_from": "samsaara@"
 }

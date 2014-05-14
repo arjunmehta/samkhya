@@ -97,6 +97,9 @@ var samsaara = (function(samsaara){
 
     if(module.internalMethods){
       for(var methodName in module.internalMethods){
+
+        console.log("Trying to use", methodName);
+
         if(!internalMethods[methodName]){
           internalMethods[methodName] = module.internalMethods[methodName];
         }
