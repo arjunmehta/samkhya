@@ -112,8 +112,9 @@ var samsaara = (function(samsaara){
     }
 
     if(module.initializationMethods){
-      for(var i=0; i < module.initializationMethods.length; i++){
-        initializationMethods.push(module.initializationMethods[i]);
+      // console.log("initializationMethods", module.initializationMethods);
+      for(var initMethod in module.initializationMethods){
+        initializationMethods.push(module.initializationMethods[initMethod]);
       }
     }    
   };
@@ -396,29 +397,6 @@ var samsaara = (function(samsaara){
 
 
 
-var windowSize = (function(module){
-
-  window.onresize = function(e){
-    samsaara.nsFunc("internal", "windowResize", window.innerWidth, window.innerHeight);
-  };
-
-  module.internalMethods = {
-    getWindowSize: function(callBack){
-      if(typeof callBack === "function") callBack(window.innerWidth, window.innerHeight);
-    }
-  };
-
-  module.initializationMethods = {};
-  module.closeMethods = {};
-
-  return module;
-
-}(this.windowSize = this.windowSize || {}));
-
-
-
-
-
  //Browser Detect Script: http://www.quirksmode.org/js/detect.html
 
 // var BrowserDetect = {
@@ -540,34 +518,5 @@ var windowSize = (function(module){
 
 
 
-function getScreenInfo(){
 
-  var displayObject = {};
-
-  displayObject.screenX = window.screenX;
-  displayObject.screenY = window.screenY;
-
-  displayObject.displayWidth = window.screen.width;
-  displayObject.displayHeight = window.screen.height;
-
-  displayObject.displayAvailWidth = window.screen.availWidth;
-  displayObject.displayAvailHeight = window.screen.availHeight;
-
-  displayObject.displayAvailLeft = window.screen.availLeft;
-  displayObject.displayAvailTop = window.screen.availTop;
-
-  displayObject.innerWidth = window.innerWidth;
-  displayObject.innerHeight = window.innerHeight;
-
-  displayObject.outerWidth = window.outerWidth;
-  displayObject.outerHeight = window.outerHeight;
-
-  if(self.navInfo.displayCalibrated){
-    displayObject.calibratedX = self.navInfo.displayCalibrated.X;
-    displayObject.calibratedY = self.navInfo.displayCalibrated.Y;
-  }
-
-  displayObject.totalDisplayWidth = 0;
-
-}
 

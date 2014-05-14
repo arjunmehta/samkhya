@@ -127,6 +127,7 @@ Connection.prototype.closeConnection = function(message){
   }
 
   this.conn.removeAllListeners();
+  
   delete connections[connID];
 
   log.warn(" ", config.uuid, moduleName, "CLOSING: ", connID, message);
@@ -165,9 +166,10 @@ Connection.prototype.initialize = function(opts){
 
 Connection.prototype.completeInitialization = function(){
   if(this.initialized === false){
+    this.initialized = true;
     console.log(config.uuid, this.id, "Initialized");
     communication.sendToClient(this.id, {internal: "samsaaraInitialized", args: [true]}, function (confirmation){
-      this.connection.initialized = true;
+      // this.connection.initialized = true;
       samsaara.emit('initialized', this.connection);
     });
   }
@@ -187,7 +189,6 @@ function InitializedAttributes(connection){
 
 InitializedAttributes.prototype.force = function(attribute){
   this.forced[attribute] = false;
-  // console.log("////////////////////////////////Forcing Attribute", this.forced);
 };
 
 InitializedAttributes.prototype.initialized = function(err, attribute){
@@ -215,53 +216,4 @@ InitializedAttributes.prototype.allInitialized = function(){
   }
   return true;
 };
-
-
-
-var initializationMethods = {
-  windowSize: windowSizeInitOptions
-};
-
-for(var ext in initializationMethods){
-  Connection.prototype.initializationMethods.push(initializationMethods[ext]);
-}
-
-
-
-
-
-
-function windowSizeInitOptions(opts, connection, attributes){
-
-  connection.updateDataAttribute("clientWindow", {});
-
-  if(opts.windowSize !== undefined){
-    console.log("Initializing Window Size...");
-    if(opts.windowSize === "force") attributes.force("windowSize");
-    communication.sendToClient(connection.id, {internal: "getWindowSize"}, windowResize);
-  }
-}
-
-function windowResize(width, height, windowOffsetX, windowOffsetY){
-  var connection = this.connection;
-  connection.updateDataAttribute("clientWindow", {windowWidth: width, windowHeight: height, offsetX: windowOffsetX, offsetY: windowOffsetY});
-  samsaara.emit('windowSize', connection, width, height, windowOffsetX, windowOffsetY);
-}
-
-
-
-
-
-function updateConnectionInfo(attributes, callBack){
-
-  var whichOne = connection;
-  log.debug(""+process.pid, moduleName, "UPDATING CONNECTION INFO", attributes, whichOne);
-
-  for(var attr in attributes){
-    whichOne[attr] = attributes[attr];
-  }
-  if(whichOne.connectionClass === "symbolic"){
-    communication.sendToOwner(whichOne.id, whichOne.owner, {internal: "updateConnectionInfo", args: [attributes], specialKey: config.specialKey}, callBack);
-  }
-}
 
