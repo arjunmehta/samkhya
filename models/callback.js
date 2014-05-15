@@ -7,12 +7,16 @@
 var debugManagement = require('debug')('samsaara:callback:management');
 var debugConnections = require('debug')('samsaara:callback:connections');
 
-exports = module.exports = IncomingCallBack;
-
-var config = require('../lib/config.js');
-var incomingCallBacks = require('../lib/communication.js').incomingCallBacks;
+var incomingCallBacks;
 
 var initOffset = 1000;
+
+
+function initialize(incomingCallBacksObj){
+  debugManagement("Initializing CallBacks", incomingCallBacksObj);
+  incomingCallBacks = incomingCallBacksObj;
+}
+
 
 function IncomingCallBack(theCallBack, callBackID, processes){
   this.callBackID = callBackID;
@@ -25,6 +29,7 @@ function IncomingCallBack(theCallBack, callBackID, processes){
 
 
 IncomingCallBack.prototype.addConnections = function(connArray){
+  debugConnections("Adding Waiting Callback Connections", connArray);
   for(var i=0; i<connArray.length; i++){
     this.list[connArray[i]] = true;
   }
@@ -33,7 +38,7 @@ IncomingCallBack.prototype.addConnections = function(connArray){
 
 
 IncomingCallBack.prototype.addConnection = function(connID){
-  // debugConnections("ADDING WAITING CALLBACK CONNECTION", connID);
+  debugConnections("Adding Waiting Callback Connection", connID);
   this.list[connID] = true;
   this.total++;
 };
@@ -83,4 +88,9 @@ function totalInit(processes){
   }
 }
 
+
+exports = module.exports = {
+  initialize: initialize,
+  IncomingCallBack: IncomingCallBack
+};
 

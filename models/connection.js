@@ -10,16 +10,28 @@ var debug = require('debug')('samsaara:connection:main');
 var debugInitialization = require('debug')('samsaara:connection:initialization');
 var debugCommunication = require('debug')('samsaara:connection:communication');
 
-var samsaara = require('../index.js');
-var config = require('../lib/config');
 
-var communication = require('../lib/communication');
-var connectionController = require('../lib/connectionController');
-var router = require('../lib/router');
+var preInitializationMethods = [],
+    initializationMethods = [],
+    closingMethods = [];
 
-var connections = connectionController.connections;
 
-exports = module.exports = Connection;
+exports = module.exports = {
+  preInitializationMethods : preInitializationMethods,
+  initializationMethods : initializationMethods,
+  closingMethods : closingMethods,
+
+  Connection: Connection,
+  InitializedAttributes: InitializedAttributes
+};
+
+
+var samsaara = require('../index'),
+    config = require('../lib/config'),
+    communication = require('../lib/communication'),
+    connectionController = require('../lib/connectionController'),
+    router = require('../lib/router'),
+    connections = connectionController.connections;
 
 
 function Connection(conn){
@@ -38,8 +50,8 @@ function Connection(conn){
 
   this.connectionData = {};
 
-  for(var i=0; i < this.preInitializationMethods.length; i++){
-    this.preInitializationMethods[i](connection);
+  for(var i=0; i < preInitializationMethods.length; i++){
+    preInitializationMethods[i](connection);
   }
 
   conn.on('close', function (message){
@@ -59,12 +71,6 @@ function Connection(conn){
   samsaara.emit("connect", this);
 }
 
-
-Connection.prototype.preInitializationMethods = [];
-
-Connection.prototype.initializationMethods = [];
-
-Connection.prototype.closingMethods = [];
 
 
 /*
@@ -119,8 +125,8 @@ Connection.prototype.closeConnection = function(message){
   var connID = this.id;
   samsaara.emit("disconnect", this);
 
-  for(var i=0; i < this.closingMethods.length; i++){
-    this.closingMethods[i](this);
+  for(var i=0; i < closingMethods.length; i++){
+    closingMethods[i](this);
   }
 
   this.conn.removeAllListeners();
@@ -148,8 +154,8 @@ Connection.prototype.initialize = function(opts){
   var connection = this;
   var ia = this.initializeAttributes;
 
-  for(var i=0; i < this.initializationMethods.length; i++){
-    this.initializationMethods[i](opts, connection, ia);
+  for(var i=0; i < initializationMethods.length; i++){
+    initializationMethods[i](opts, connection, ia);
   }
 
   ia.ready = true;

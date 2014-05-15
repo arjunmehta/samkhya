@@ -10,6 +10,7 @@ var samsaara = (function(samsaara){
 
 
   samsaaraDebug = debug('samsaara:main');
+  samsaaraDebugCallBack = debug('samsaara:callback');
 
   // samsaara is an instance of an EventEmitter
 
@@ -202,7 +203,7 @@ var samsaara = (function(samsaara){
     }
 
     if(preinitialized === true){
-      sendRawWithHeaders( samsaaraOwner, {}, JSON.stringify(packetJSON) );
+      sendRawWithHeaders( owner, {}, JSON.stringify(packetJSON) );
     }
     else{
       functionQueue.push( packetJSON );
@@ -335,7 +336,7 @@ var samsaara = (function(samsaara){
       else{
         samsaaraDebug("Samsaara Error:", messageObj.func, "Is not a valid property of this Samsaara Object", messageObj);
         if(messageObj.callBack){
-          send({ns: "internal", func: "callItBackError", args: [messageObj.callBack, messageObj.owner, ["ERROR: Invalid Object on Client"]]}, messageObj.owner);
+          send({ns: "internal", func: "callItBackError", args: [messageObj.callBack, ["ERROR: Invalid Object on Client"]]}, messageObj.owner);
         }
       }
     }
@@ -359,6 +360,7 @@ var samsaara = (function(samsaara){
 
       var callBackID = messageObj.callBack;
       var theCallBack = outgoingCallBacks[callBackID] = createCallBack(callBackID, messageObj.owner);
+      samsaaraDebugCallBack("Creating callback", callBackID, messageObj.owner);
 
       if(messageObj.args === undefined){
         messageObj.args = [];
@@ -374,6 +376,9 @@ var samsaara = (function(samsaara){
 
   function createCallBack(id, owner){
     var theCallBack = function(){
+
+      samsaaraDebugCallBack("executing callback", id, owner);
+
       var args = Array.prototype.slice.call(arguments);
       if(typeof args[args.length-1] === "function"){
         var aCallBack = args.pop();
