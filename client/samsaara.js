@@ -1,6 +1,22 @@
+/*!
+ * samsaara client
+ *
+ * Copyright(c) 2013-2014 Arjun Mehta <arjun@newlief.com>
+ * MIT Licensed
+ */
+
+
 var samsaara = (function(samsaara){
 
+
+  samsaaraDebug = debug('samsaara:main');
+
+  // samsaara is an instance of an EventEmitter
+
   samsaara = new EventEmitter();
+
+
+  // set up core variables
 
   var samsaaraID,
       samsaaraToken,
@@ -29,6 +45,83 @@ var samsaara = (function(samsaara){
   var messageRoutes = {};
   var headerList = {};
 
+
+  // initialize samsaara with a set of options (passed to server)
+
+  samsaara.initialize = function(opts){
+
+    options = opts;
+
+    if(opts){
+      for(var opt in opts){
+        remoteOptions[opt] = opts[opt];
+      }
+      if(opts.socksURL){
+        sockjs_url = opts.socksURL;
+      }
+    }
+    initSock();
+  };
+
+
+  // expose a method or a set of methods
+
+  samsaara.expose = function(set){
+    for(var func in set){
+      exposedMethods[func] = set[func];
+    }
+  };
+
+
+  // add an internal "special" method
+
+  samsaara.addInternalMethod = function(name, func){
+    if(!internalMethods[name]){
+      internalMethods[name] = func;
+    }
+  };
+
+
+  // load middleware modules
+
+  samsaara.use = function(module){
+
+    if(typeof module === "function"){
+      module = module(samsaara, attributes);
+    }
+
+    samsaaraDebug("Trying to use", module);
+
+    if(module.internalMethods){
+      for(var methodName in module.internalMethods){
+
+        samsaaraDebug("Trying to use", methodName);
+
+        if(!internalMethods[methodName]){
+          internalMethods[methodName] = module.internalMethods[methodName];
+        }
+      }
+    }
+
+    if(module.messageRoutes){
+      for(var routeName in module.messageRoutes){
+        if(!messageRoutes[routeName]){
+          messageRoutes[routeName] = module.messageRoutes[routeName];
+        }
+      }
+    }
+
+    if(module.initializationMethods){
+      // samsaaraDebug("initializationMethods", module.initializationMethods);
+      for(var initMethod in module.initializationMethods){
+        initializationMethods.push(module.initializationMethods[initMethod]);
+      }
+    }
+  };
+
+
+  // attributes of middleware that are initialized to set "preinitialized" state to start sending messages.
+
   var attributes = {initializedAttributes : {init: false} };
 
   attributes.force = function(attributeName){
@@ -37,7 +130,7 @@ var samsaara = (function(samsaara){
 
   attributes.initializedAttribute = function(attributeName){
 
-    console.log("Initialized Attribute", attributeName);
+    samsaaraDebug("Initialized Attribute", attributeName);
 
     attributes.initializedAttributes[attributeName] = true;
     if(attributes.allInitialized() === true){
@@ -56,104 +149,32 @@ var samsaara = (function(samsaara){
     headerList[headerKey] = headerValue;
   };
 
-  /**
-   * Public Methods
-   **/
 
-  samsaara.initialize = function(opts){
-
-    options = opts;
-
-    if(opts){
-      for(var opt in opts){
-        remoteOptions[opt] = opts[opt];
-      } 
-      if(opts.socksURL){
-        sockjs_url = opts.socksURL;
-      }
-    }
-    initSock();
-  };
-
-  samsaara.expose = function(set){
-    for(var func in set){
-      exposedMethods[func] = set[func];
-    }
-  };
-
-  samsaara.addInternalMethod = function(name, func){
-    if(!internalMethods[name]){
-      internalMethods[name] = func;
-    }
-  };
-
-  samsaara.use = function(module){
-
-    if(typeof module === "function"){
-      module = module(samsaara, attributes);
-    }
-
-    console.log("Trying to use", module);
-
-    if(module.internalMethods){
-      for(var methodName in module.internalMethods){
-
-        console.log("Trying to use", methodName);
-
-        if(!internalMethods[methodName]){
-          internalMethods[methodName] = module.internalMethods[methodName];
-        }
-      }
-    }
-
-    if(module.messageRoutes){
-      for(var routeName in module.messageRoutes){
-        if(!messageRoutes[routeName]){
-          messageRoutes[routeName] = module.messageRoutes[routeName];
-        }
-      }
-    }
-
-    if(module.initializationMethods){
-      // console.log("initializationMethods", module.initializationMethods);
-      for(var initMethod in module.initializationMethods){
-        initializationMethods.push(module.initializationMethods[initMethod]);
-      }
-    }    
-  };
-
-
-  /**
-   * Private/Public Methods
-   **/
+  // server-side function execution
 
   var func = samsaara.func = function(fname){
     var args = arguments;
-    var packet = {};    
-    packet.func = fname;
-
+    var packet = { func: fname };    
     processAndSend(1, packet, args, samsaaraOwner);
   };
 
   var nsFunc = samsaara.nsFunc = function(ns, fname){
     var args = arguments;
-    var packet = {};    
-    packet.ns = ns;
-    packet.func = fname;
-
+    var packet = { ns: ns, func: fname };
     processAndSend(2, packet, args, samsaaraOwner);
   };
 
 
-  /**
-   * Private Methods
-   **/
+  // raw message send, updates heartbeat time.
 
-  function sendRaw(message){
-    console.log("SENDING",message);
+  function sendRaw(message){    
+    samsaaraDebug("SENDING",message);
     lastBeat = heartBeatBeat;
     sockjs.send(message);
   }
+
+
+  // adds headers to the raw message, including owner, and other module headers
 
   function sendRawWithHeaders(owner, customHeaderList, message){
     var header = owner;
@@ -169,6 +190,9 @@ var samsaara = (function(samsaara){
     sendRaw(header + message);
   }
 
+
+  // package a more high level JSON object to include a callback and owner
+
   function send(packetJSON, owner, callBack){
 
     if(typeof callBack === "function"){
@@ -178,9 +202,7 @@ var samsaara = (function(samsaara){
     }
 
     if(preinitialized === true){
-      // packetJSON.token = samsaaraToken;
-      // if(packetJSON.owner !== undefined && packetJSON.owner !== samsaaraOwner)
-      sendRawWithHeaders( samsaaraOwner, {}, JSON.stringify(packetJSON) );  //    +":"+samsaaraToken+"::"
+      sendRawWithHeaders( samsaaraOwner, {}, JSON.stringify(packetJSON) );
     }
     else{
       functionQueue.push( packetJSON );
@@ -191,6 +213,9 @@ var samsaara = (function(samsaara){
     packet.ns = ns;
     send(packet, callBack);
   }
+
+
+  // process message arguments and send
 
   function processAndSend(offset, packet, args, owner){
     if(args.length > offset){
@@ -212,12 +237,15 @@ var samsaara = (function(samsaara){
   }
 
 
+  // initialize socket/sockjs
+
   function initSock(){
 
     sockjs = new SockJS(sockjs_url);
 
     sockjs.onopen = function(){
-      console.log('[*] samsaara socket open', sockjs.protocol);
+
+      samsaaraDebug('[*] samsaara socket open', sockjs.protocol);
 
       sockConnectionTimerTime = 0;
 
@@ -227,89 +255,41 @@ var samsaara = (function(samsaara){
     };
 
     sockjs.onmessage = function(e){
+
       var messageParsed = {};
+
       try{
-        console.log("INCOMING MESSAGE", e.data);
-        messageParsed = JSON.parse(e.data);           
+        samsaaraDebug("INCOMING MESSAGE", e.data);
+        messageParsed = JSON.parse(e.data);
       }
       catch(err){
-        console.log(err);
+        samsaaraDebug(err);
       }
+
       evalMessage(messageParsed);
+
     };
 
     sockjs.onclose = function(e){
-      console.log('[*] samsaara socket close');
+
+      samsaaraDebug('[*] samsaara socket close');
+
       preinitialized = false;
 
       sockConnectionTimer = setTimeout(function(){
+
+        // slow down reconnection attempts after a few
+
         var timeoutTime = sockConnectionTimerTime >= (15000/2) ? 15000 : (sockConnectionTimerTime*2 + 400);
         sockConnectionTimerTime = timeoutTime;
-
         initSock();
+
       }, sockConnectionTimerTime);
     };
   }
 
-  function heartBeater(){
-    if(lastBeat < heartBeatBeat - 1){
-      sendRaw('H');
-    }
-    console.log("Beat Beat", lastBeat, heartBeatBeat);
-    heartBeatBeat++;
-  }
 
-  function evalMessage(messageParsed){
-
-    var messageObj = messageParsed[1];
-
-    if(messageRoutes[messageParsed[0]] !== undefined){
-      messageRoutes[messageParsed[0]](messageObj);
-    }
-    else{
-      messageObj.owner = messageParsed[0];
-    }    
-    
-    if(messageObj.func !== undefined){
-      if(exposedMethods[messageObj.func] !== undefined){
-        execute(exposedMethods[messageObj.func], messageObj);
-      }
-      else{
-        console.log("Samsaara Error:", messageObj.func, "Is not a valid property of this Samsaara Object", messageObj);
-        if(messageObj.callBack){
-          send({ns: "internal", func: "callItBackError", args: [messageObj.callBack, messageObj.owner, ["ERROR: Invalid Object on Client"]]}, messageObj.owner);
-        }
-      }
-    }
-
-    if(messageObj.internal !== undefined){
-      if(internalMethods[messageObj.internal] !== undefined){
-        execute(internalMethods[messageObj.internal], messageObj);
-      }
-      else{
-        console.log("Samsaara Error:", messageObj.internal, "Is not a valid property of this Samsaara Object");
-      }
-    }
-  }
-
-
-  messageRoutes.init = function(messageObj){
-    if(messageObj.samsaaraHeartBeat){
-      clearInterval(heartBeat);
-      heartBeat = setInterval(heartBeater, messageObj.samsaaraHeartBeat);
-    }
-    if(messageObj.samsaaraID !== undefined){
-      samsaaraID = messageObj.samsaaraID;
-      console.log("CONNECTED AS:" + samsaaraID);
-    }
-    if(messageObj.samsaaraOwner !== undefined){
-      samsaaraOwner = messageObj.samsaaraOwner;
-      sendRawWithHeaders( samsaaraOwner, {}, JSON.stringify({opts: remoteOptions}) );
-      console.log("samsaaraOwner:" + samsaaraOwner);
-    }
-
-    attributes.initializedAttribute("init");
-  };
+  // pre-initializes the module, and allows it to send messages (useful for authentication)
 
   function preinitialize(){
 
@@ -324,6 +304,55 @@ var samsaara = (function(samsaara){
     }
   }
 
+
+  // heartbeat to server. executed on an interval to keep the connection alive
+
+  function heartBeater(){
+    if(lastBeat < heartBeatBeat - 1){
+      sendRaw('H');
+    }
+    heartBeatBeat++;
+  }
+
+
+  // pre-initializes the module, and allows it to send messages (useful for authentication)
+
+  function evalMessage(messageParsed){
+
+    var messageObj = messageParsed[1];
+
+    if(messageRoutes[messageParsed[0]] !== undefined){
+      messageRoutes[messageParsed[0]](messageObj);
+    }
+    else{
+      messageObj.owner = messageParsed[0];
+    }
+
+    if(messageObj.func !== undefined){
+      if(exposedMethods[messageObj.func] !== undefined){
+        execute(exposedMethods[messageObj.func], messageObj);
+      }
+      else{
+        samsaaraDebug("Samsaara Error:", messageObj.func, "Is not a valid property of this Samsaara Object", messageObj);
+        if(messageObj.callBack){
+          send({ns: "internal", func: "callItBackError", args: [messageObj.callBack, messageObj.owner, ["ERROR: Invalid Object on Client"]]}, messageObj.owner);
+        }
+      }
+    }
+
+    if(messageObj.internal !== undefined){
+      if(internalMethods[messageObj.internal] !== undefined){
+        execute(internalMethods[messageObj.internal], messageObj);
+      }
+      else{
+        samsaaraDebug("Samsaara Error:", messageObj.internal, "Is not a valid property of this Samsaara Object");
+      }
+    }
+  }
+
+
+  // executes a function from our message and builds a callback for it if it needs to
+
   function execute(func, messageObj){
 
     if(messageObj.callBack !== undefined){
@@ -336,8 +365,12 @@ var samsaara = (function(samsaara){
       }
       messageObj.args.push(outgoingCallBacks[callBackID]);
     }
+
     func.apply(samsaara, messageObj.args);
   }
+
+
+  // creates a closure that is placed in our outgoingCallBacks object list
 
   function createCallBack(id, owner){
     var theCallBack = function(){
@@ -348,26 +381,43 @@ var samsaara = (function(samsaara){
       }
       else{
         processAndSend(0, {ns:"internal", func:"callItBack"}, [id, args], owner);
-      }      
+      }
       delete outgoingCallBacks[id];
     };
     return theCallBack;
   }
 
 
-  /**
-   * Exposed Internal Methods
-   **/
+  // initialization route for messages sent with the init:: header
+
+  messageRoutes.init = function(messageObj){
+    if(messageObj.samsaaraHeartBeat){
+      clearInterval(heartBeat);
+      heartBeat = setInterval(heartBeater, messageObj.samsaaraHeartBeat);
+    }
+    if(messageObj.samsaaraID !== undefined){
+      samsaaraID = messageObj.samsaaraID;
+      samsaaraDebug("CONNECTED AS:" + samsaaraID);
+    }
+    if(messageObj.samsaaraOwner !== undefined){
+      samsaaraOwner = messageObj.samsaaraOwner;
+      sendRawWithHeaders( samsaaraOwner, {}, JSON.stringify({opts: remoteOptions}) );
+      samsaaraDebug("samsaaraOwner:" + samsaaraOwner);
+    }
+
+    attributes.initializedAttribute("init");
+  };
+
+
+  // internal exposed methods that the server may call
 
   internalMethods.callItBack = function(id, owner, args){
-    // console.log("CALL IT BACK", id, owner, args);
-    // console.log("CALL IT BACK", incomingCallBacks);
     incomingCallBacks[id].callBack.apply(incomingCallBacks[id].from, args);
     delete incomingCallBacks[id];
   };
 
   internalMethods.reportError = function(code, message){
-    console.log("SAMSAARA SERVER ERROR:", code, message);
+    samsaaraDebug("SAMSAARA SERVER ERROR:", code, message);
   };
 
   internalMethods.samsaaraInitialized = function(initialized, callBack){
@@ -376,9 +426,7 @@ var samsaara = (function(samsaara){
   };
 
 
-  /**
-   * Helper Methods
-   **/
+  // helper method to generate a psudounique hash of any length
 
   function makeIdAlpha(idLength){
     var text = "";
@@ -388,6 +436,9 @@ var samsaara = (function(samsaara){
     }
     return text;
   }
+
+
+  // return our final, complete, samsaara!
 
   return samsaara;
 
