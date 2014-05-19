@@ -29,7 +29,7 @@ function IncomingCallBack(theCallBack, callBackID, processes){
 
 
 IncomingCallBack.prototype.addConnections = function(connArray){
-  debugConnections("Adding Waiting Callback Connections", connArray);
+  debugConnections("Adding Waiting Callback Connections", this.callBackID, connArray);
   for(var i=0; i<connArray.length; i++){
     this.list[connArray[i]] = true;
   }
@@ -38,7 +38,7 @@ IncomingCallBack.prototype.addConnections = function(connArray){
 
 
 IncomingCallBack.prototype.addConnection = function(connID){
-  debugConnections("Adding Waiting Callback Connection", connID);
+  debugConnections("Adding Waiting Callback Connection", this.callBackID, connID);
   this.list[connID] = true;
   this.total++;
 };

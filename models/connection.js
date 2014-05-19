@@ -9,6 +9,7 @@
 var debug = require('debug')('samsaara:connection:main');
 var debugInitialization = require('debug')('samsaara:connection:initialization');
 var debugCommunication = require('debug')('samsaara:connection:communication');
+var debugHeartbeat = require('debug')('samsaara:connection:heartbeat');
 
 
 var preInitializationMethods = [],
@@ -33,6 +34,12 @@ var samsaara = require('../index'),
     router = require('../lib/router'),
     connections = connectionController.connections;
 
+var incomingCallBacks = communication.incomingCallBacks;
+
+
+function initialize(){
+
+}
 
 function Connection(conn){
 
@@ -73,19 +80,19 @@ function Connection(conn){
 
 
 
-/*
- * Method to update connectionData attribute on the connection. This method should be used when updating
- * the connection with new data, as it can be middlewared to broadcast changes, etc.
- */
+// 
+// Method to update connectionData attribute on the connection. This method should be used when updating
+// the connection with new data, as it can be middlewared to broadcast changes, etc.
+// 
 
 Connection.prototype.updateDataAttribute = function(attributeName, value) {
   this.connectionData[attributeName] = value;
 };
 
 
-/*
- * Method to handle new socket messages.
- */
+//
+// Method to handle new socket messages.
+//
 
 Connection.prototype.handleMessage = function(raw_message){
 
@@ -94,9 +101,11 @@ Connection.prototype.handleMessage = function(raw_message){
 
   this.lastHeartBeat = connectionController.globalBeat;
 
+  debugCommunication("New Connection Message on "+config.uuid, this.id, raw_message);
+
   switch(raw_message){
     case "H":
-      debugCommunication("Heartbeat...", this.id, this.lastHeartBeat, connectionController.globalBeat);
+      debugHeartbeat("Heartbeat...", this.id, this.lastHeartBeat, connectionController.globalBeat);
       break;
     default:
       router.newConnectionMessage(this, raw_message);
@@ -104,9 +113,29 @@ Connection.prototype.handleMessage = function(raw_message){
 };
 
 
-/*
- * Method to handle new socket messages.
- */
+
+
+// 
+// Method to execute methods on the client.
+// 
+
+Connection.prototype.execute = function(packet, callback){
+
+  var connection = this;
+
+  communication.makeCallBack(0, packet, callback, function (callBackID, packetReady){
+    if(callBackID !== null){
+      incomingCallBacks[callBackID].addConnection(connection.id);
+    }
+    connection.write(packetReady); // will send directly or via symbolic
+  });
+};
+
+
+
+// 
+// Method to send new socket messages.
+// 
 
 Connection.prototype.write = function(message){
   // debugCommunication(config.uuid, "NATIVE write on", this.id);
@@ -114,9 +143,9 @@ Connection.prototype.write = function(message){
 };
 
 
-/*
- * Connection close handler.
- */
+// 
+// Connection close handler.
+// 
 
 Connection.prototype.closeConnection = function(message){
   // var hd = new memwatch.HeapDiff();
@@ -141,9 +170,9 @@ Connection.prototype.closeConnection = function(message){
 };
 
 
-/*
- * Method to start the initialization process. Executed from the router, when the opts message is received.
- */
+// 
+// Method to start the initialization process. Executed from the router, when the opts message is received.
+// 
 
 Connection.prototype.initialize = function(opts){
 
@@ -163,9 +192,9 @@ Connection.prototype.initialize = function(opts){
 };
 
 
-/*
- * Method to finish the initialization process.
- */
+// 
+// Method to finish the initialization process.
+// 
 
 Connection.prototype.completeInitialization = function(){
   if(this.initialized === false){
@@ -173,16 +202,16 @@ Connection.prototype.completeInitialization = function(){
 
     debugInitialization(config.uuid, this.id, "Initialized");
 
-    communication.sendToClient(this.id, {internal: "samsaaraInitialized", args: [true]}, function (confirmation){
+    this.execute({internal: "samsaaraInitialized", args: [true]}, function (confirmation){
       samsaara.emit('initialized', this.connection);
     });
   }
 };
 
 
-/*
- * A special object that manages the initialization of various attributes of the connection.
- */
+// 
+// A special object that manages the initialization of various attributes of the connection.
+// 
 
 function InitializedAttributes(connection){
   this.connection = connection;

@@ -576,6 +576,10 @@ var samsaara = (function(samsaara){
 // BrowserDetect.init();
 
 
+// samsaara.sanghaKara(contextID, "functionName", arg1, arh2, arg3);
+// samsaara.vargaKara(contextID, "functionName", arg1, arh2, arg3);
+// samsaara.kara(contextID, "functionName", arg1, arh2, arg3);
+
 
 
 

@@ -89,7 +89,6 @@ samsaara = (function Samsaara(module){
       addClientFileRoute("sockjs.js", __dirname + '/client/sockjs-0.3.min.js');
       addClientFileRoute("ee.js", __dirname + '/client/EventEmitter.min.js');
 
-      addClientScript(__dirname + '/client/ahead.js');
       addClientScript(__dirname + '/node_modules/debug/debug.js');
       addClientScript(__dirname + '/client/EventEmitter.min.js');
       addClientScript(__dirname + '/client/sockjs-0.3.min.js');
@@ -110,18 +109,21 @@ samsaara = (function Samsaara(module){
     // bring certain methods from submodules to root
 
     var bringToMain = {
-      connections: connectionController.connections,
+      connection: connectionController.connection,
 
-      nameSpaces: communication.nameSpaces,
-      expose: communication.expose,
-      exposeNamespace: communication.exposeNamespace,
-
-      sendToClient: communication.sendToClient,
+      nameSpace: communication.nameSpace,
+      createNamespace: communication.createNamespace,
+      expose: communication.expose
     };
 
     for(var func in bringToMain){
       module[func] = bringToMain[func];
     }
+
+    module.constructors = {
+      IncomingCallBack: communication.IncomingCallBack,
+      NameSpace: communication.NameSpace
+    };
 
 
     // initialize middleware
