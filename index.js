@@ -9,60 +9,90 @@
 // load dependencies
 
 var debug = require('debug')('samsaara:index');
+var helper = require('./lib/helper');
 
 var fs = require('fs');
 var uglify = require("uglify-js");
 
+
+// build and export an object (a new EventEmitter)
+
 var EventEmitter = require('events').EventEmitter;
 var samsaara = new EventEmitter();
-
-
-// export and build core object
-
 exports = module.exports = samsaara;
 
-samsaara = (function Samsaara(module){
+
+// augment exported module
+
+(function Samsaara(module){
 
 
   // set up core object variables
+  // the core object is a "complete" object that is passed to middleware
+  // for greater flexibility in modifying functionality
 
-  var expressApp,
-      connectionController,
-      communication,      
-      router;
+  var core = {
+    samsaara: module,
+    uuid: helper.makeIdAlphaNumerical(8),
+    constructors: {},
+    capability: {}
+  };
 
-  var middleware = require('./lib/middleware');
-  var config = module.config = require('./lib/config');
+  core.connectionController = require('./lib/connectionController').initialize(core);
+  core.communication = require('./lib/communication').initialize(core);
+  core.router = require('./lib/router').initialize(core);
 
-  var sockjs = require('sockjs');
-  var sockjsOpts = { socketPath: "/echo" };
-  var sockjsServer = sockjs.createServer();
+  core.Connection = require('./models/connection').initialize(core);
+  core.NameSpace = require('./models/namespace').initialize(core);
+  core.IncomingCallBack = require('./models/callback').initialize(core);
 
-  var stack = [];
-  var clientStack = [];
 
+  // set up modules and middleware
+
+  var modules = {
+    serverStack: [],
+    clientStack: []
+  };
+
+  var middleware = require('./lib/middleware').initialize(core, modules);
+  
 
   // add routes & scripts (for concatenation into main client script)
 
-  var addClientScript = module.addClientScript = function(filePath){
-    clientStack.push(filePath);
+  var expressApp;  
+
+  var addClientScript = core.addClientScript = function(filePath){
+    modules.clientStack.push(filePath);
   };
 
-  var addClientFileRoute = module.addClientFileRoute = function(filename, filePath){
+  var addClientFileRoute = core.addClientFileRoute = function(filename, filePath){
     expressApp.get('/samsaara/'+filename, function (req, res){
       res.sendfile(filePath);
     });
   };
 
-  var addClientGetRoute = module.addClientGetRoute = function(route, method){
+  var addClientGetRoute = core.addClientGetRoute = function(route, method){
     expressApp.get(route, method);
   };
 
 
+  // set up socket abstraction (currently sockjs)
+
+  var sockjs = require('sockjs');
+  var sockjsOpts = { socketPath: "/echo" };
+  var sockjsServer = sockjs.createServer();
+
+
+
+  //
+  // public methods
+  //
+
+
   // middleware loader
 
-  module.use = function(newMiddleware){
-    stack.push(newMiddleware);
+  module.use = core.use = function(newMiddleware){
+    modules.serverStack.push(newMiddleware);
     return this;
   };
 
@@ -75,7 +105,7 @@ samsaara = (function Samsaara(module){
     // copy options to config, and set other base options
 
     if(opts){
-      config.options = opts;
+      core.options = opts;
       sockjsOpts.socketPath = opts.socketPath || "/echo";
     }
 
@@ -99,51 +129,33 @@ samsaara = (function Samsaara(module){
     }
 
 
-    // load core submodules
+    // surface main public methods from core modules
 
-    connectionController = module.connectionController = require('./lib/connectionController');
-    communication = module.communication = require('./lib/communication');
-    router = module.router = require('./lib/router');
-
-
-    // bring certain methods from submodules to root
-
-    var bringToMain = {
-      connection: connectionController.connection,
-
-      nameSpace: communication.nameSpace,
-      createNamespace: communication.createNamespace,
-      expose: communication.expose
-    };
-
-    for(var func in bringToMain){
-      module[func] = bringToMain[func];
-    }
-
-    module.constructors = {
-      IncomingCallBack: communication.IncomingCallBack,
-      NameSpace: communication.NameSpace
-    };
+    module.connection = connectionController.connection;
+    module.nameSpace = communication.nameSpace;
+    module.createNamespace = communication.createNamespace;
+    module.expose = communication.expose;
 
 
     // initialize middleware
 
-    middleware.initialize(module, stack, clientStack);
+    middleware.load();
 
 
     // generate a concatenated and minified client script file for core and all submodules
 
-    var clientUglified = uglify.minify(clientStack);
+    var clientUglified = uglify.minify(modules.clientStack);
     var clientFilePath = __dirname + '/client/samsaara.min.js';
 
     fs.writeFile(clientFilePath, clientUglified.code, function (err){
 
-      if(err) {
+      if(err){
         debug(err);
-      } else {
+      }
+      else{
         debug("Samsaara client script generated and saved:", clientFilePath);
         addClientFileRoute("samsaara.js", clientFilePath);
-      }      
+      }
 
 
       // open up socket port and listen for new connections
@@ -151,13 +163,11 @@ samsaara = (function Samsaara(module){
       sockjsServer.installHandlers( server, { prefix: sockjsOpts.socketPath } );
 
       sockjsServer.on('connection', function (socketConnection){
-        connectionController.createNewConnection(socketConnection);
+        core.connectionController.createNewConnection(socketConnection);
       });
 
     });
-
   };
-
 })(samsaara);
 
 

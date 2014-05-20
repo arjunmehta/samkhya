@@ -18,6 +18,9 @@ var preInitializationMethods = [],
 
 
 exports = module.exports = {
+
+  initialize: initialize,
+
   preInitializationMethods : preInitializationMethods,
   initializationMethods : initializationMethods,
   closingMethods : closingMethods,
@@ -27,19 +30,27 @@ exports = module.exports = {
 };
 
 
-var samsaara = require('../index'),
-    config = require('../lib/config'),
-    communication = require('../lib/communication'),
-    connectionController = require('../lib/connectionController'),
-    router = require('../lib/router'),
-    connections = connectionController.connections;
-
-var incomingCallBacks = communication.incomingCallBacks;
+// var samsaara = require('../index'),
+//     config = require('../lib/config'),
+//     communication = require('../lib/communication'),
+//     connectionController = require('../lib/connectionController'),
+//     router = require('../lib/router'),
+//     connections = connectionController.connections;
 
 
-function initialize(){
+function initialize(samsaaraCore){
 
+  samsaara = samsaaraCore.samsaara;
+  processUuid = samsaaraCore.uuid;
+  communication = samsaaraCore.communication;
+  connectionController = samsaaraCore.connectionController;
+  router = samsaaraCore.router;
+  connections = connectionController.connections;
+
+  return Connection;
 }
+
+
 
 function Connection(conn){
 
@@ -48,7 +59,7 @@ function Connection(conn){
   this.id = conn.id;
   this.conn = conn;
 
-  this.owner = config.uuid;
+  this.owner = processUuid;
 
   this.initializeAttributes = new InitializedAttributes(this);
   this.initialized = false;
@@ -71,7 +82,7 @@ function Connection(conn){
 
   conn.write(JSON.stringify(["init",{
     samsaaraID: connection.id,
-    samsaaraOwner: config.uuid,
+    samsaaraOwner: processUuid,
     samsaaraHeartBeat: connectionController.heartBeatThreshold
   }]));
 
@@ -101,7 +112,7 @@ Connection.prototype.handleMessage = function(raw_message){
 
   this.lastHeartBeat = connectionController.globalBeat;
 
-  debugCommunication("New Connection Message on "+config.uuid, this.id, raw_message);
+  debugCommunication("New Connection Message on "+ processUuid, this.id, raw_message);
 
   switch(raw_message){
     case "H":
@@ -123,9 +134,9 @@ Connection.prototype.execute = function(packet, callback){
 
   var connection = this;
 
-  communication.makeCallBack(0, packet, callback, function (callBackID, packetReady){
-    if(callBackID !== null){
-      incomingCallBacks[callBackID].addConnection(connection.id);
+  communication.makeCallBack(0, packet, callback, function (incomingCallBack, packetReady){
+    if(incomingCallBack !== null){
+      incomingCallBack.addConnection(connection.id);
     }
     connection.write(packetReady); // will send directly or via symbolic
   });
@@ -138,7 +149,7 @@ Connection.prototype.execute = function(packet, callback){
 // 
 
 Connection.prototype.write = function(message){
-  // debugCommunication(config.uuid, "NATIVE write on", this.id);
+  // debugCommunication(processUuid, "NATIVE write on", this.id);
   this.conn.write(message);
 };
 
@@ -162,7 +173,7 @@ Connection.prototype.closeConnection = function(message){
 
   delete connections[connID];
 
-  // debug(config.uuid, "CLOSING:", connID, message);
+  // debug(processUuid, "CLOSING:", connID, message);
 
   ////////
   // var diff = hd.end();
@@ -200,7 +211,7 @@ Connection.prototype.completeInitialization = function(){
   if(this.initialized === false){
     this.initialized = true;
 
-    debugInitialization(config.uuid, this.id, "Initialized");
+    debugInitialization(processUuid, this.id, "Initialized");
 
     this.execute({internal: "samsaaraInitialized", args: [true]}, function (confirmation){
       samsaara.emit('initialized', this.connection);

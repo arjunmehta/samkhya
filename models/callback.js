@@ -8,18 +8,22 @@ var debugManagement = require('debug')('samsaara:callback:management');
 var debugConnections = require('debug')('samsaara:callback:connections');
 
 var incomingCallBacks;
-
 var initOffset = 1000;
 
 
-function initialize(incomingCallBacksObj){
-  debugManagement("Initializing CallBacks", incomingCallBacksObj);
-  incomingCallBacks = incomingCallBacksObj;
+function initialize(samsaaraCore){
+
+  console.log("CALLBACK", samsaaraCore);
+
+  debugManagement("Initializing CallBacks", samsaaraCore.communication.incomingCallBacks);
+  incomingCallBacks = samsaaraCore.communication.incomingCallBacks;
+
+  return IncomingCallBack;
 }
 
 
 function IncomingCallBack(theCallBack, callBackID, processes){
-  this.callBackID = callBackID;
+  this.id = this.callBackID = callBackID;
   this.callBack = theCallBack;
   this.owner = process.pid;
   this.list = {};
