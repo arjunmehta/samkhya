@@ -13,8 +13,6 @@ var initOffset = 1000;
 
 function initialize(samsaaraCore){
 
-  console.log("CALLBACK", samsaaraCore);
-
   debugManagement("Initializing CallBacks", samsaaraCore.communication.incomingCallBacks);
   incomingCallBacks = samsaaraCore.communication.incomingCallBacks;
 

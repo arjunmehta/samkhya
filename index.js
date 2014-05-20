@@ -19,6 +19,7 @@ var uglify = require("uglify-js");
 
 var EventEmitter = require('events').EventEmitter;
 var samsaara = new EventEmitter();
+
 exports = module.exports = samsaara;
 
 
@@ -42,9 +43,17 @@ exports = module.exports = samsaara;
   core.communication = require('./lib/communication').initialize(core);
   core.router = require('./lib/router').initialize(core);
 
-  core.Connection = require('./models/connection').initialize(core);
-  core.NameSpace = require('./models/namespace').initialize(core);
-  core.IncomingCallBack = require('./models/callback').initialize(core);
+  core.constructors.Connection = require('./models/connection').initialize(core);
+  core.constructors.NameSpace = require('./models/namespace').initialize(core);
+  core.constructors.IncomingCallBack = require('./models/callback').initialize(core);
+
+
+  // surface main public methods from core modules
+
+  module.connection = core.connectionController.connection;
+  module.nameSpace = core.communication.nameSpace;
+  module.createNamespace = core.communication.createNamespace;
+  module.expose = core.communication.expose;
 
 
   // set up modules and middleware
@@ -84,11 +93,6 @@ exports = module.exports = samsaara;
 
 
 
-  //
-  // public methods
-  //
-
-
   // middleware loader
 
   module.use = core.use = function(newMiddleware){
@@ -99,14 +103,14 @@ exports = module.exports = samsaara;
 
   // initialize everything
 
-  module.initialize = function (server, app, opts){
+  module.initialize = function (server, app, options){
 
 
     // copy options to config, and set other base options
 
-    if(opts){
-      core.options = opts;
-      sockjsOpts.socketPath = opts.socketPath || "/echo";
+    if(options){
+      core.options = options;
+      sockjsOpts.socketPath = options.socketPath || "/echo";
     }
 
 
@@ -125,19 +129,11 @@ exports = module.exports = samsaara;
       addClientScript(__dirname + '/client/samsaara.js');
     }
     else{
-      throw new Error("You must provide an Express app object so Samsaara can attach its routes");
+      throw new Error("You must provide an Express app object so samsaara can attach its routes");
     }
 
 
-    // surface main public methods from core modules
-
-    module.connection = connectionController.connection;
-    module.nameSpace = communication.nameSpace;
-    module.createNamespace = communication.createNamespace;
-    module.expose = communication.expose;
-
-
-    // initialize middleware
+    // load middleware
 
     middleware.load();
 
@@ -147,27 +143,21 @@ exports = module.exports = samsaara;
     var clientUglified = uglify.minify(modules.clientStack);
     var clientFilePath = __dirname + '/client/samsaara.min.js';
 
-    fs.writeFile(clientFilePath, clientUglified.code, function (err){
-
-      if(err){
-        debug(err);
-      }
-      else{
-        debug("Samsaara client script generated and saved:", clientFilePath);
-        addClientFileRoute("samsaara.js", clientFilePath);
-      }
+    fs.writeFileSync(clientFilePath, clientUglified.code);
+    addClientFileRoute("samsaara.js", clientFilePath);
 
 
-      // open up socket port and listen for new connections
+    // open up socket port and listen for new connections
 
-      sockjsServer.installHandlers( server, { prefix: sockjsOpts.socketPath } );
+    sockjsServer.installHandlers( server, { prefix: sockjsOpts.socketPath } );
 
-      sockjsServer.on('connection', function (socketConnection){
-        core.connectionController.createNewConnection(socketConnection);
-      });
-
+    sockjsServer.on('connection', function (socketConnection){
+      core.connectionController.createNewConnection(socketConnection);
     });
+
+
   };
+
 })(samsaara);
 
 
