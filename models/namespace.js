@@ -6,14 +6,16 @@
 
 var debug = require('debug')('samsaara:namespaces');
 
+
+var core;
 var nameSpaces;
-var samsaara;
+
 
 function initialize(samsaaraCore, nameSpacesObj){
 
   debug("Initializing Namespaces", samsaaraCore.communication.nameSpaces);
 
-  samsaara = samsaaraCore;
+  core = samsaaraCore;
   nameSpaces = samsaaraCore.communication.nameSpaces;
 
   return NameSpace;

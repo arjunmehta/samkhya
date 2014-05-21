@@ -12,39 +12,26 @@ var debugCommunication = require('debug')('samsaara:connection:communication');
 var debugHeartbeat = require('debug')('samsaara:connection:heartbeat');
 
 
+var core,
+    samsaara,
+    communication,
+    connectionController,
+    router,
+    connections;
+
 var preInitializationMethods = [],
     initializationMethods = [],
     closingMethods = [];
 
 
-exports = module.exports = {
-
-  initialize: initialize,
-
-  preInitializationMethods : preInitializationMethods,
-  initializationMethods : initializationMethods,
-  closingMethods : closingMethods,
-
-  Connection: Connection,
-  InitializedAttributes: InitializedAttributes
-};
-
-
-// var samsaara = require('../index'),
-//     config = require('../lib/config'),
-//     communication = require('../lib/communication'),
-//     connectionController = require('../lib/connectionController'),
-//     router = require('../lib/router'),
-//     connections = connectionController.connections;
-
-
 function initialize(samsaaraCore){
 
+  core = samsaaraCore;
   samsaara = samsaaraCore.samsaara;
-  processUuid = samsaaraCore.uuid;
   communication = samsaaraCore.communication;
   connectionController = samsaaraCore.connectionController;
   router = samsaaraCore.router;
+  
   connections = connectionController.connections;
 
   return Connection;
@@ -59,7 +46,7 @@ function Connection(conn){
   this.id = conn.id;
   this.conn = conn;
 
-  this.owner = processUuid;
+  this.owner = core.uuid;
 
   this.initializeAttributes = new InitializedAttributes(this);
   this.initialized = false;
@@ -82,7 +69,7 @@ function Connection(conn){
 
   conn.write(JSON.stringify(["init",{
     samsaaraID: connection.id,
-    samsaaraOwner: processUuid,
+    samsaaraOwner: core.uuid,
     samsaaraHeartBeat: connectionController.heartBeatThreshold
   }]));
 
@@ -91,19 +78,15 @@ function Connection(conn){
 
 
 
-// 
 // Method to update connectionData attribute on the connection. This method should be used when updating
 // the connection with new data, as it can be middlewared to broadcast changes, etc.
-// 
 
 Connection.prototype.updateDataAttribute = function(attributeName, value) {
   this.connectionData[attributeName] = value;
 };
 
 
-//
 // Method to handle new socket messages.
-//
 
 Connection.prototype.handleMessage = function(raw_message){
 
@@ -112,7 +95,7 @@ Connection.prototype.handleMessage = function(raw_message){
 
   this.lastHeartBeat = connectionController.globalBeat;
 
-  debugCommunication("New Connection Message on "+ processUuid, this.id, raw_message);
+  debugCommunication("New Connection Message on "+ core.uuid, this.id, raw_message);
 
   switch(raw_message){
     case "H":
@@ -124,11 +107,7 @@ Connection.prototype.handleMessage = function(raw_message){
 };
 
 
-
-
-// 
 // Method to execute methods on the client.
-// 
 
 Connection.prototype.execute = function(packet, callback){
 
@@ -143,24 +122,17 @@ Connection.prototype.execute = function(packet, callback){
 };
 
 
-
-// 
 // Method to send new socket messages.
-// 
 
 Connection.prototype.write = function(message){
-  // debugCommunication(processUuid, "NATIVE write on", this.id);
+  // debugCommunication(core.uuid, "NATIVE write on", this.id);
   this.conn.write(message);
 };
 
 
-// 
 // Connection close handler.
-// 
 
 Connection.prototype.closeConnection = function(message){
-  // var hd = new memwatch.HeapDiff();
-  ////////
 
   var connID = this.id;
   samsaara.emit("disconnect", this);
@@ -173,17 +145,11 @@ Connection.prototype.closeConnection = function(message){
 
   delete connections[connID];
 
-  // debug(processUuid, "CLOSING:", connID, message);
-
-  ////////
-  // var diff = hd.end();
-  // console.log(diff.change.details);
+  // debug(core.uuid, "CLOSING:", connID, message);
 };
 
 
-// 
 // Method to start the initialization process. Executed from the router, when the opts message is received.
-// 
 
 Connection.prototype.initialize = function(opts){
 
@@ -203,15 +169,13 @@ Connection.prototype.initialize = function(opts){
 };
 
 
-// 
 // Method to finish the initialization process.
-// 
 
 Connection.prototype.completeInitialization = function(){
   if(this.initialized === false){
     this.initialized = true;
 
-    debugInitialization(processUuid, this.id, "Initialized");
+    debugInitialization(core.uuid, this.id, "Initialized");
 
     this.execute({internal: "samsaaraInitialized", args: [true]}, function (confirmation){
       samsaara.emit('initialized', this.connection);
@@ -220,9 +184,9 @@ Connection.prototype.completeInitialization = function(){
 };
 
 
-// 
+
+
 // A special object that manages the initialization of various attributes of the connection.
-// 
 
 function InitializedAttributes(connection){
   this.connection = connection;
@@ -260,3 +224,16 @@ InitializedAttributes.prototype.allInitialized = function(){
   return true;
 };
 
+
+
+exports = module.exports = {
+
+  initialize: initialize,
+
+  preInitializationMethods : preInitializationMethods,
+  initializationMethods : initializationMethods,
+  closingMethods : closingMethods,
+
+  Connection: Connection,
+  InitializedAttributes: InitializedAttributes
+};

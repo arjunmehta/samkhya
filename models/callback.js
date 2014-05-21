@@ -7,6 +7,8 @@
 var debugManagement = require('debug')('samsaara:callback:management');
 var debugConnections = require('debug')('samsaara:callback:connections');
 
+
+var core;
 var incomingCallBacks;
 var initOffset = 1000;
 
@@ -14,6 +16,8 @@ var initOffset = 1000;
 function initialize(samsaaraCore){
 
   debugManagement("Initializing CallBacks", samsaaraCore.communication.incomingCallBacks);
+
+  core = samsaaraCore;  
   incomingCallBacks = samsaaraCore.communication.incomingCallBacks;
 
   return IncomingCallBack;
@@ -23,9 +27,7 @@ function initialize(samsaaraCore){
 function IncomingCallBack(theCallBack, callBackID, processes){
   this.id = this.callBackID = callBackID;
   this.callBack = theCallBack;
-  this.owner = process.pid;
   this.list = {};
-  this.expiry = new Date().getTime()+3600000;
   this.total = totalInit(processes);
 }
 

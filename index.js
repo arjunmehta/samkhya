@@ -8,14 +8,15 @@
 
 // load dependencies
 
+var fs = require('fs');
+
+var uglify = require("uglify-js");
 var debug = require('debug')('samsaara:index');
+
 var helper = require('./lib/helper');
 
-var fs = require('fs');
-var uglify = require("uglify-js");
 
-
-// build and export an object (a new EventEmitter)
+// build and export our object (a new EventEmitter)
 
 var EventEmitter = require('events').EventEmitter;
 var samsaara = new EventEmitter();
@@ -25,19 +26,24 @@ exports = module.exports = samsaara;
 
 // augment exported module
 
-(function Samsaara(module){
+(function Samsaara(samsaara){
 
 
   // set up core object variables
-  // the core object is a "complete" object that is passed to middleware
-  // for greater flexibility in modifying functionality
+  //
+  // the "core" object is a _complete_ object that is passed to middleware
+  // that gives them access to all core objects. while shielding access from the
+  // main module.
 
   var core = {
-    samsaara: module,
-    uuid: helper.makeIdAlphaNumerical(8),
+    samsaara: samsaara,
+    uuid: helper.makeIdAlphaNumerical(8), // the uuid can change at any time. Keep that in mind.
     constructors: {},
     capability: {}
   };
+
+
+  // build up core
 
   core.connectionController = require('./lib/connectionController').initialize(core);
   core.communication = require('./lib/communication').initialize(core);
@@ -50,13 +56,13 @@ exports = module.exports = samsaara;
 
   // surface main public methods from core modules
 
-  module.connection = core.connectionController.connection;
-  module.nameSpace = core.communication.nameSpace;
-  module.createNamespace = core.communication.createNamespace;
-  module.expose = core.communication.expose;
+  samsaara.connection = core.connectionController.connection;
+  samsaara.nameSpace = core.communication.nameSpace;
+  samsaara.createNamespace = core.communication.createNamespace;
+  samsaara.expose = core.communication.expose;
 
 
-  // set up modules and middleware
+  // set up modules and middleware loader
 
   var modules = {
     serverStack: [],
@@ -95,15 +101,15 @@ exports = module.exports = samsaara;
 
   // middleware loader
 
-  module.use = core.use = function(newMiddleware){
-    modules.serverStack.push(newMiddleware);
+  samsaara.use = core.use = function(module){
+    modules.serverStack.push(module);
     return this;
   };
 
 
   // initialize everything
 
-  module.initialize = function (server, app, options){
+  samsaara.initialize = function (server, app, options){
 
 
     // copy options to config, and set other base options
@@ -133,7 +139,7 @@ exports = module.exports = samsaara;
     }
 
 
-    // load middleware
+    // load/build in middleware
 
     middleware.load();
 
