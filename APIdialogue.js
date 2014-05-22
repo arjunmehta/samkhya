@@ -159,16 +159,16 @@ function Context(contextID, resource){
 }
 
 Context.prototype.add = function(connection){
-  if(!this.members[connection.id]){
+  if(this.members[connection.id] === undefined){
     this.count++;
     this.members[connection.id] = true;
   }
 };
 
 Context.prototype.remove = function(connection){
-  if(this.members[connection.id]){
+  if(this.members[connection.id] !== undefined){
     this.count--;
-    delete this.members[connection.id];
+    this.members[connection.id] = delete;
   }
 };
 

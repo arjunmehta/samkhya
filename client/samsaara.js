@@ -12,6 +12,7 @@ var samsaara = (function(samsaara){
   samsaaraDebug = debug('samsaara:main');
   samsaaraDebugCallBack = debug('samsaara:callback');
 
+
   // samsaara is an instance of an EventEmitter
 
   samsaara = new EventEmitter();
@@ -19,8 +20,14 @@ var samsaara = (function(samsaara){
 
   // set up core variables
 
+  var core = {
+    samsaara: samsaara,
+    samsaaraID : "",
+    samsaaraOwner: "",
+    options: {}
+  };
+
   var samsaaraID,
-      samsaaraToken,
       samsaaraOwner,
       preinitialized = false;
 
@@ -121,6 +128,28 @@ var samsaara = (function(samsaara){
   };
 
 
+  // exposed execution method, takes client input and sends it through the packet processing chain.
+
+  samsaara.execute = function(){
+    var packet = {func: arguments[0], args: []};
+    packet = processPacket(packet, arguments);
+    send( packet, core.samsaaraOwner );
+  };
+
+
+  // creates a namespace object that holds an execute method with the namespace as a closure..
+
+  samsaara.nameSpace = function(nameSpaceName){
+    return {
+      execute: function execute(){
+        var packet = {ns: nameSpaceName, func: arguments[0], args: []};
+        packet = processPacket(packet, arguments);
+        send( packet, core.samsaaraOwner );
+      }
+    };
+  };
+
+
   // attributes of middleware that are initialized to set "preinitialized" state to start sending messages.
 
   var attributes = {initializedAttributes : {init: false} };
@@ -151,89 +180,78 @@ var samsaara = (function(samsaara){
   };
 
 
-  // server-side function execution
+  // prepares raw JSON packet to be sent (without headers)
 
-  var func = samsaara.func = function(fname){
-    var args = arguments;
-    var packet = { func: fname };    
-    processAndSend(1, packet, args, samsaaraOwner);
+  var processPacket = core.processPacket = function(packet, args){
+
+    for (var i = 1; i < args.length-1; i++){
+      packet.args.push(args[i]);
+    }
+
+    if(typeof args[args.length-1] === "function"){
+      packet = core.makeCallBack(packet, args[args.length-1]);
+    }
+    else{
+      packet.args.push(args[args.length-1]);
+    }
+
+    return packet;
   };
 
-  var nsFunc = samsaara.nsFunc = function(ns, fname){
-    var args = arguments;
-    var packet = { ns: ns, func: fname };
-    processAndSend(2, packet, args, samsaaraOwner);
+
+  // creates a local callback that waits for a callItBack message from the server (see internalMethods.callItBack)
+
+  var makeCallBack = core.makeCallBack = function(packet, theCallBack){
+
+    if(typeof theCallBack === "function"){
+      var callBackID = makeIdAlpha(12);
+      incomingCallBacks[callBackID] = {callBack: theCallBack};
+      packet.callBack = callBackID;
+    }
+
+    return packet;
   };
 
 
   // raw message send, updates heartbeat time.
 
-  function sendRaw(message){    
-    samsaaraDebug("SENDING",message);
+  function sendRaw(message){
+    samsaaraDebug("SENDING", message);
     lastBeat = heartBeatBeat;
     sockjs.send(message);
   }
 
 
-  // adds headers to the raw message, including owner, and other module headers
+  // adds headers to the raw message, including message owner, and other module headers
 
-  function sendRawWithHeaders(owner, customHeaderList, message){
+  function sendRawWithHeaders(message, owner, customHeaderList){
     var header = owner;
 
     for(var key in headerList){
       header += ":" + key + ":" + headerList[key];
     }
-    for(var customKey in customHeaderList){
-      header += ":" + customKey + ":" + customHeaderList[customKey];
+
+    if(customHeaderList){
+      for(var customKey in customHeaderList){
+        header += ":" + customKey + ":" + customHeaderList[customKey];
+      }
     }
+
     header += "::";
 
     sendRaw(header + message);
   }
 
 
-  // package a more high level JSON object to include a callback and owner
+  // determine whether or not to send the package now, or later
 
-  function send(packetJSON, owner, callBack){
-
-    if(typeof callBack === "function"){
-      var callBackID = makeIdAlpha(12);
-      incomingCallBacks[callBackID] = {callBack: callBack};
-      packetJSON.callBack = callBackID;
-    }
+  function send(packet, owner, headers){
 
     if(preinitialized === true){
-      sendRawWithHeaders( owner, {}, JSON.stringify(packetJSON) );
+      sendRawWithHeaders( JSON.stringify(packet), owner, headers);
     }
     else{
-      functionQueue.push( packetJSON );
-    }
-  }
-
-  function nsSend(ns, packet, callBack){
-    packet.ns = ns;
-    send(packet, callBack);
-  }
-
-
-  // process message arguments and send
-
-  function processAndSend(offset, packet, args, owner){
-    if(args.length > offset){
-      packet.args = [];
-      for(var i = offset; i < args.length-1; i++){
-        packet.args.push(args[i]);
-      }
-      if(typeof args[args.length-1] === "function"){
-        send(packet, owner, args[args.length-1]);
-      }
-      else{
-        packet.args.push(args[args.length-1]);
-        send(packet, owner);
-      }
-    }
-    else{
-      send(packet, owner);
+      functionQueue.push( [ packet, owner, headers ] );
     }
   }
 
@@ -295,10 +313,12 @@ var samsaara = (function(samsaara){
   function preinitialize(){
 
     if(preinitialized === false){
+
       preinitialized = true;
+
       if(functionQueue.length > 0){
         for(var i=0; i < functionQueue.length; i++){
-          send( functionQueue[i], samsaaraOwner);
+          send( functionQueue[i][0], functionQueue[i][1], functionQueue[i][2]);
         }
         functionQueue = [];
       }
@@ -331,7 +351,7 @@ var samsaara = (function(samsaara){
 
     if(messageObj.func !== undefined){
       if(exposedMethods[messageObj.func] !== undefined){
-        execute(exposedMethods[messageObj.func], messageObj);
+        executeFunction(exposedMethods[messageObj.func], messageObj);
       }
       else{
         samsaaraDebug("Samsaara Error:", messageObj.func, "Is not a valid property of this Samsaara Object", messageObj);
@@ -343,7 +363,7 @@ var samsaara = (function(samsaara){
 
     if(messageObj.internal !== undefined){
       if(internalMethods[messageObj.internal] !== undefined){
-        execute(internalMethods[messageObj.internal], messageObj);
+        executeFunction(internalMethods[messageObj.internal], messageObj);
       }
       else{
         samsaaraDebug("Samsaara Error:", messageObj.internal, "Is not a valid property of this Samsaara Object");
@@ -354,7 +374,7 @@ var samsaara = (function(samsaara){
 
   // executes a function from our message and builds a callback for it if it needs to
 
-  function execute(func, messageObj){
+  function executeFunction(func, messageObj){
 
     if(messageObj.callBack !== undefined){
 
@@ -375,20 +395,26 @@ var samsaara = (function(samsaara){
   // creates a closure that is placed in our outgoingCallBacks object list
 
   function createCallBack(id, owner){
+
     var theCallBack = function(){
 
       samsaaraDebugCallBack("executing callback", id, owner);
 
+      var packet = {ns:"internal", func:"callItBack", args: []};
       var args = Array.prototype.slice.call(arguments);
+      
       if(typeof args[args.length-1] === "function"){
         var aCallBack = args.pop();
-        processAndSend(0, {ns:"internal", func:"callItBack"}, [id, args, aCallBack], owner);
+        packet = processPacket(packet, [id, args, aCallBack]);
       }
       else{
-        processAndSend(0, {ns:"internal", func:"callItBack"}, [id, args], owner);
+        packet = processPacket(packet, [id, args]);
       }
-      delete outgoingCallBacks[id];
+
+      send(packet, owner);
+      delete outgoingCallBacks[id];           
     };
+
     return theCallBack;
   }
 
@@ -406,7 +432,7 @@ var samsaara = (function(samsaara){
     }
     if(messageObj.samsaaraOwner !== undefined){
       samsaaraOwner = messageObj.samsaaraOwner;
-      sendRawWithHeaders( samsaaraOwner, {}, JSON.stringify({opts: remoteOptions}) );
+      sendRawWithHeaders( JSON.stringify({opts: remoteOptions}), samsaaraOwner);
       samsaaraDebug("samsaaraOwner:" + samsaaraOwner);
     }
 
@@ -450,130 +476,6 @@ var samsaara = (function(samsaara){
 }(this.samsaara = this.samsaara || {}));
 
 
-
-
-
-
-
-
- //Browser Detect Script: http://www.quirksmode.org/js/detect.html
-
-// var BrowserDetect = {
-//   init: function () {
-//     this.browser = this.searchString(this.dataBrowser) || "An unknown browser";
-//     this.version = this.searchVersion(navigator.userAgent) || this.searchVersion(navigator.appVersion) || "an unknown version";
-//     this.OS = this.searchString(this.dataOS) || "an unknown OS";
-//   },
-//   searchString: function (data) {
-//     for (var i=0;i<data.length;i++)  {
-//       var dataString = data[i].string;
-//       var dataProp = data[i].prop;
-//       this.versionSearchString = data[i].versionSearch || data[i].identity;
-//       if (dataString) {
-//         if (dataString.indexOf(data[i].subString) != -1)
-//           return data[i].identity;
-//       }
-//       else if (dataProp)
-//         return data[i].identity;
-//     }
-//   },
-//   searchVersion: function (dataString) {
-//     var index = dataString.indexOf(this.versionSearchString);
-//     if (index == -1) return;
-//     return parseFloat(dataString.substring(index+this.versionSearchString.length+1));
-//   },
-//   dataBrowser: [
-//     {
-//       string: navigator.userAgent,
-//       subString: "Chrome",
-//       identity: "Chrome"
-//     },
-//     {
-//        string: navigator.userAgent,
-//       subString: "OmniWeb",
-//       versionSearch: "OmniWeb/",
-//       identity: "OmniWeb"
-//     },
-//     {
-//       string: navigator.vendor,
-//       subString: "Apple",
-//       identity: "Safari",
-//       versionSearch: "Version"
-//     },
-//     {
-//       prop: window.opera,
-//       identity: "Opera",
-//       versionSearch: "Version"
-//     },
-//     {
-//       string: navigator.vendor,
-//       subString: "iCab",
-//       identity: "iCab"
-//     },
-//     {
-//       string: navigator.vendor,
-//       subString: "KDE",
-//       identity: "Konqueror"
-//     },
-//     {
-//       string: navigator.userAgent,
-//       subString: "Firefox",
-//       identity: "Firefox"
-//     },
-//     {
-//       string: navigator.vendor,
-//       subString: "Camino",
-//       identity: "Camino"
-//     },
-//     {    // for newer Netscapes (6+)
-//       string: navigator.userAgent,
-//       subString: "Netscape",
-//       identity: "Netscape"
-//     },
-//     {
-//       string: navigator.userAgent,
-//       subString: "MSIE",
-//       identity: "Explorer",
-//       versionSearch: "MSIE"
-//     },
-//     {
-//       string: navigator.userAgent,
-//       subString: "Gecko",
-//       identity: "Mozilla",
-//       versionSearch: "rv"
-//     },
-//     {     // for older Netscapes (4-)
-//       string: navigator.userAgent,
-//       subString: "Mozilla",
-//       identity: "Netscape",
-//       versionSearch: "Mozilla"
-//     }
-//   ],
-//   dataOS : [
-//     {
-//       string: navigator.platform,
-//       subString: "Win",
-//       identity: "Windows"
-//     },
-//     {
-//       string: navigator.platform,
-//       subString: "Mac",
-//       identity: "Mac"
-//     },
-//     {
-//       string: navigator.userAgent,
-//       subString: "iPhone",
-//       identity: "iPhone/iPod"
-//     },
-//     {
-//       string: navigator.platform,
-//       subString: "Linux",
-//       identity: "Linux"
-//     }
-//   ]
-// };
-
-// BrowserDetect.init();
 
 
 // samsaara.sanghaKara(contextID, "functionName", arg1, arh2, arg3);

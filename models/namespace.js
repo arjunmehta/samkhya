@@ -30,7 +30,7 @@ function NameSpace(nameSpaceName, methods){
 NameSpace.prototype.expose = function(methods){
   for(var method in methods){
     this.methods[method] = methods[method];
-  }
+  }    
 };
 
 
