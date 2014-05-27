@@ -168,7 +168,7 @@ Context.prototype.add = function(connection){
 Context.prototype.remove = function(connection){
   if(this.members[connection.id] !== undefined){
     this.count--;
-    this.members[connection.id] = delete;
+    this.members[connection.id] = undefined;
   }
 };
 

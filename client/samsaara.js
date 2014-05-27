@@ -53,6 +53,8 @@ var samsaara = (function(samsaara){
   var messageRoutes = {};
   var headerList = {};
 
+  var nameSpaces = {};
+
 
   // initialize samsaara with a set of options (passed to server)
 
@@ -75,19 +77,9 @@ var samsaara = (function(samsaara){
   // expose a method or a set of methods
 
   samsaara.expose = function(set){
-    for(var func in set){
-      exposedMethods[func] = set[func];
-    }
+    nameSpaces.core.expose(set);
   };
 
-
-  // add an internal "special" method
-
-  samsaara.addInternalMethod = function(name, func){
-    if(!internalMethods[name]){
-      internalMethods[name] = func;
-    }
-  };
 
 
   // load middleware modules
@@ -101,14 +93,8 @@ var samsaara = (function(samsaara){
     samsaaraDebug("Trying to use", module);
 
     if(module.internalMethods){
-      for(var methodName in module.internalMethods){
-
-        samsaaraDebug("Trying to use", methodName);
-
-        if(!internalMethods[methodName]){
-          internalMethods[methodName] = module.internalMethods[methodName];
-        }
-      }
+      samsaaraDebug("TRYING TO LOAD INTERNAL METHODS", module.internalMethods);
+      nameSpaces.internal.expose(module.internalMethods);
     }
 
     if(module.messageRoutes){
@@ -137,7 +123,7 @@ var samsaara = (function(samsaara){
   };
 
 
-  // creates a namespace object that holds an execute method with the namespace as a closure..
+  // creates a namespace object that holds an execute method with the SERVER namespace as a closure..
 
   samsaara.nameSpace = function(nameSpaceName){
     return {
@@ -147,6 +133,30 @@ var samsaara = (function(samsaara){
         send( packet, core.samsaaraOwner );
       }
     };
+  };
+
+
+
+
+  // local namespaces
+
+  var createLocalNamespace = samsaara.createLocalNamespace = function(nameSpaceName, exposed){
+    if(!nameSpaces[nameSpaceName]){
+      nameSpaces[nameSpaceName] = new NameSpace(nameSpaceName, exposed);
+    }
+    return nameSpaces[nameSpaceName];
+  };
+
+  function NameSpace(nameSpaceName, exposed){
+    this.id = nameSpaceName;
+    this.methods = exposed || {};
+  }
+
+  NameSpace.prototype.expose = function(methods){
+    samsaaraDebug("TRYING TO EXPOSE", methods);
+    for(var method in methods){
+      this.methods[method] = methods[method];
+    } 
   };
 
 
@@ -318,7 +328,7 @@ var samsaara = (function(samsaara){
 
       if(functionQueue.length > 0){
         for(var i=0; i < functionQueue.length; i++){
-          send( functionQueue[i][0], functionQueue[i][1], functionQueue[i][2]);
+          send( functionQueue[i][0], functionQueue[i][1] || core.samsaaraOwner, functionQueue[i][2]);
         }
         functionQueue = [];
       }
@@ -341,34 +351,29 @@ var samsaara = (function(samsaara){
   function evalMessage(messageParsed){
 
     var messageObj = messageParsed[1];
+    var nsName = messageObj.ns || "core";
+    var ns = nameSpaces[nsName];
+    var func = messageObj.func;
 
     if(messageRoutes[messageParsed[0]] !== undefined){
       messageRoutes[messageParsed[0]](messageObj);
     }
     else{
-      messageObj.owner = messageParsed[0];
-    }
+      messageObj.owner = messageParsed[0];    
 
-    if(messageObj.func !== undefined){
-      if(exposedMethods[messageObj.func] !== undefined){
-        executeFunction(exposedMethods[messageObj.func], messageObj);
+      samsaaraDebug("new messageObj", messageObj);
+
+      if(func !== undefined && ns.methods[func] !== undefined){      
+        executeFunction(ns.methods[func], messageObj);
       }
       else{
-        samsaaraDebug("Samsaara Error:", messageObj.func, "Is not a valid property of this Samsaara Object", messageObj);
+        samsaaraDebug("Samsaara Error:", func, "Is not a valid property of this Samsaara Object", messageObj);
         if(messageObj.callBack){
           send({ns: "internal", func: "callItBackError", args: [messageObj.callBack, ["ERROR: Invalid Object on Client"]]}, messageObj.owner);
         }
       }
     }
 
-    if(messageObj.internal !== undefined){
-      if(internalMethods[messageObj.internal] !== undefined){
-        executeFunction(internalMethods[messageObj.internal], messageObj);
-      }
-      else{
-        samsaaraDebug("Samsaara Error:", messageObj.internal, "Is not a valid property of this Samsaara Object");
-      }
-    }
   }
 
 
@@ -400,15 +405,15 @@ var samsaara = (function(samsaara){
 
       samsaaraDebugCallBack("executing callback", id, owner);
 
-      var packet = {ns:"internal", func:"callItBack", args: []};
+      var packet = {ns:"internal", func:"callItBack", args: [id]};
       var args = Array.prototype.slice.call(arguments);
       
       if(typeof args[args.length-1] === "function"){
         var aCallBack = args.pop();
-        packet = processPacket(packet, [id, args, aCallBack]);
+        packet = processPacket(packet, [null, args, aCallBack]);
       }
       else{
-        packet = processPacket(packet, [id, args]);
+        packet = processPacket(packet, [null, args]);
       }
 
       send(packet, owner);
@@ -427,13 +432,13 @@ var samsaara = (function(samsaara){
       heartBeat = setInterval(heartBeater, messageObj.samsaaraHeartBeat);
     }
     if(messageObj.samsaaraID !== undefined){
-      samsaaraID = messageObj.samsaaraID;
-      samsaaraDebug("CONNECTED AS:" + samsaaraID);
+      core.samsaaraID = messageObj.samsaaraID;
+      samsaaraDebug("CONNECTED AS:" + core.samsaaraID);
     }
     if(messageObj.samsaaraOwner !== undefined){
-      samsaaraOwner = messageObj.samsaaraOwner;
-      sendRawWithHeaders( JSON.stringify({opts: remoteOptions}), samsaaraOwner);
-      samsaaraDebug("samsaaraOwner:" + samsaaraOwner);
+      core.samsaaraOwner = messageObj.samsaaraOwner;
+      sendRawWithHeaders( JSON.stringify({opts: remoteOptions}), core.samsaaraOwner);
+      samsaaraDebug("samsaaraOwner:" + core.samsaaraOwner);
     }
 
     attributes.initializedAttribute("init");
@@ -456,6 +461,9 @@ var samsaara = (function(samsaara){
     if(typeof callBack === "function") callBack(true);
   };
 
+
+  createLocalNamespace("internal", internalMethods);
+  createLocalNamespace("core", {});
 
   // helper method to generate a psudounique hash of any length
 

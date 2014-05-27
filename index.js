@@ -129,13 +129,14 @@ exports = module.exports = samsaara;
       addClientFileRoute("sockjs.js", __dirname + '/client/sockjs-0.3.min.js');
       addClientFileRoute("ee.js", __dirname + '/client/EventEmitter.min.js');
 
+      addClientScript(__dirname + '/client/ahead.js');
       addClientScript(__dirname + '/node_modules/debug/debug.js');
       addClientScript(__dirname + '/client/EventEmitter.min.js');
       addClientScript(__dirname + '/client/sockjs-0.3.min.js');
       addClientScript(__dirname + '/client/samsaara.js');
     }
     else{
-      throw new Error("You must provide an Express app object so samsaara can attach its routes");
+      throw new Error("You must provide an (express) app object so samsaara can attach its routes");
     }
 
 

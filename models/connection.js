@@ -107,19 +107,78 @@ Connection.prototype.handleMessage = function(raw_message){
 };
 
 
-// Method to execute methods on the client.
 
-Connection.prototype.execute = function(packet, callback){
+// creates a namespace object that holds an execute method with the namespace as a closure..
+
+Connection.prototype.nameSpace = function(nameSpaceName){
 
   var connection = this;
 
-  communication.makeCallBack(0, packet, callback, function (incomingCallBack, packetReady){
+  return {
+    execute: function execute(){
+      var packet = {ns:nameSpaceName, func: arguments[0], args: []};
+      executeOnConnection(connection, packet, arguments);
+    }
+  };
+};
+
+// Method to execute methods on the client.
+
+Connection.prototype.execute = function(){
+
+  var connection = this;
+  var packet = {func: arguments[0], args: []};
+  executeOnConnection(connection, packet, arguments);
+};
+
+
+function executeOnConnection(connection, packet, args){
+
+  communication.processPacket(0, packet, args, function (incomingCallBack, packetReady){
     if(incomingCallBack !== null){
       incomingCallBack.addConnection(connection.id);
     }
     connection.write(packetReady); // will send directly or via symbolic
   });
+}
+
+// Method to execute methods on the client.
+
+Connection.prototype.executeRaw = function(packet, callback){
+
+  var connection = this;
+
+  if(typeof callback === "function"){
+    communication.makeCallBack(0, packet, callback, function (incomingCallBack, packetReady){
+      incomingCallBack.addConnection(connection.id);
+      connection.write(packetReady); // will send directly or via symbolic
+    });
+  }
+  else{
+    connection.write( JSON.stringify([core.uuid, packet]) );
+  }
+
 };
+
+
+
+
+
+function processPacket(packet, args){
+
+  for (var i = 1; i < args.length-1; i++){
+    packet.args.push(args[i]);
+  }
+
+  if(typeof args[args.length-1] === "function"){
+    packet = core.makeCallBack(packet, args[args.length-1]);
+  }
+  else{
+    packet.args.push(args[args.length-1]);
+  }
+
+  return packet;
+}
 
 
 // Method to send new socket messages.
@@ -177,7 +236,7 @@ Connection.prototype.completeInitialization = function(){
 
     debugInitialization(core.uuid, this.id, "Initialized");
 
-    this.execute({internal: "samsaaraInitialized", args: [true]}, function (confirmation){
+    this.executeRaw({ns:"internal", func:"samsaaraInitialized", args: [true]}, function (confirmation){
       samsaara.emit('initialized', this.connection);
     });
   }
