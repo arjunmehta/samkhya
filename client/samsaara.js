@@ -93,7 +93,6 @@ var samsaara = (function(samsaara){
     samsaaraDebug("Trying to use", module);
 
     if(module.internalMethods){
-      samsaaraDebug("TRYING TO LOAD INTERNAL METHODS", module.internalMethods);
       nameSpaces.internal.expose(module.internalMethods);
     }
 
@@ -119,7 +118,7 @@ var samsaara = (function(samsaara){
   samsaara.execute = function(){
     var packet = {func: arguments[0], args: []};
     packet = processPacket(packet, arguments);
-    send( packet, core.samsaaraOwner );
+    send( packet, (core.samsaaraOwner) ? "OWN:"+core.samsaaraOwner : undefined);
   };
 
 
@@ -130,7 +129,7 @@ var samsaara = (function(samsaara){
       execute: function execute(){
         var packet = {ns: nameSpaceName, func: arguments[0], args: []};
         packet = processPacket(packet, arguments);
-        send( packet, core.samsaaraOwner );
+        send( packet, (core.samsaaraOwner) ? "OWN:"+core.samsaaraOwner : undefined );
       }
     };
   };
@@ -153,7 +152,6 @@ var samsaara = (function(samsaara){
   }
 
   NameSpace.prototype.expose = function(methods){
-    samsaaraDebug("TRYING TO EXPOSE", methods);
     for(var method in methods){
       this.methods[method] = methods[method];
     } 
@@ -234,17 +232,15 @@ var samsaara = (function(samsaara){
 
   // adds headers to the raw message, including message owner, and other module headers
 
-  function sendRawWithHeaders(message, owner, customHeaderList){
-    var header = owner;
+  function sendRawWithHeaders(message, route, headerExtra){
+    var header = route;
 
     for(var key in headerList){
       header += ":" + key + ":" + headerList[key];
     }
 
-    if(customHeaderList){
-      for(var customKey in customHeaderList){
-        header += ":" + customKey + ":" + customHeaderList[customKey];
-      }
+    if(headerExtra){
+      header += ":" + headerExtra;
     }
 
     header += "::";
@@ -255,13 +251,13 @@ var samsaara = (function(samsaara){
 
   // determine whether or not to send the package now, or later
 
-  function send(packet, owner, headers){
+  function send(packet, route, routeExtra){
 
     if(preinitialized === true){
-      sendRawWithHeaders( JSON.stringify(packet), owner, headers);
+      sendRawWithHeaders( JSON.stringify(packet), route, routeExtra);
     }
     else{
-      functionQueue.push( [ packet, owner, headers ] );
+      functionQueue.push( [ packet, route, routeExtra ] );
     }
   }
 
@@ -292,7 +288,7 @@ var samsaara = (function(samsaara){
         messageParsed = JSON.parse(e.data);
       }
       catch(err){
-        samsaaraDebug(err);
+        samsaaraDebug(new Error(err));
       }
 
       evalMessage(messageParsed);
@@ -328,7 +324,7 @@ var samsaara = (function(samsaara){
 
       if(functionQueue.length > 0){
         for(var i=0; i < functionQueue.length; i++){
-          send( functionQueue[i][0], functionQueue[i][1] || core.samsaaraOwner, functionQueue[i][2]);
+          send( functionQueue[i][0], functionQueue[i][1] || "OWN:"+core.samsaaraOwner, functionQueue[i][2]);
         }
         functionQueue = [];
       }
@@ -361,19 +357,16 @@ var samsaara = (function(samsaara){
     else{
       messageObj.owner = messageParsed[0];    
 
-      samsaaraDebug("new messageObj", messageObj);
-
       if(func !== undefined && ns.methods[func] !== undefined){      
         executeFunction(ns.methods[func], messageObj);
       }
       else{
-        samsaaraDebug("Samsaara Error:", func, "Is not a valid property of this Samsaara Object", messageObj);
+        samsaaraDebug(new Error("Samsaara Error: "+ func + " Is not a valid property of this Samsaara Object:" + JSON.stringify(messageObj) ));
         if(messageObj.callBack){
-          send({ns: "internal", func: "callItBackError", args: [messageObj.callBack, ["ERROR: Invalid Object on Client"]]}, messageObj.owner);
+          send({ns: "internal", func: "callItBackError", args: [messageObj.callBack, ["ERROR: Invalid Object on Client"]]}, "OWN:"+messageObj.owner);
         }
       }
     }
-
   }
 
 
@@ -416,7 +409,7 @@ var samsaara = (function(samsaara){
         packet = processPacket(packet, [null, args]);
       }
 
-      send(packet, owner);
+      send(packet, "OWN:"+owner);
       delete outgoingCallBacks[id];           
     };
 
@@ -437,7 +430,7 @@ var samsaara = (function(samsaara){
     }
     if(messageObj.samsaaraOwner !== undefined){
       core.samsaaraOwner = messageObj.samsaaraOwner;
-      sendRawWithHeaders( JSON.stringify({opts: remoteOptions}), core.samsaaraOwner);
+      sendRawWithHeaders( JSON.stringify({opts: remoteOptions}), "INIT");
       samsaaraDebug("samsaaraOwner:" + core.samsaaraOwner);
     }
 
