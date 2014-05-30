@@ -87,7 +87,7 @@ var samsaara = (function(samsaara){
   samsaara.use = function(module){
 
     if(typeof module === "function"){
-      module = module(samsaara, attributes);
+      module = module(core, attributes);
     }
 
     samsaaraDebug("Trying to use", module);
@@ -95,6 +95,15 @@ var samsaara = (function(samsaara){
     if(module.internalMethods){
       nameSpaces.internal.expose(module.internalMethods);
     }
+
+    if(module.main){
+      for(var methodName in module.main){
+        if(!samsaara[methodName]){
+          samsaara[methodName] = module.main[methodName];
+        }
+      }
+    }
+
 
     if(module.messageRoutes){
       for(var routeName in module.messageRoutes){
@@ -251,7 +260,7 @@ var samsaara = (function(samsaara){
 
   // determine whether or not to send the package now, or later
 
-  function send(packet, route, routeExtra){
+  var send = core.send = function(packet, route, routeExtra){
 
     if(preinitialized === true){
       sendRawWithHeaders( JSON.stringify(packet), route, routeExtra);
@@ -259,7 +268,7 @@ var samsaara = (function(samsaara){
     else{
       functionQueue.push( [ packet, route, routeExtra ] );
     }
-  }
+  };
 
 
   // initialize socket/sockjs

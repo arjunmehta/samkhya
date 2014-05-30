@@ -155,7 +155,15 @@ Connection.prototype.executeRaw = function(packet, callback){
     });
   }
   else{
-    connection.write( JSON.stringify([core.uuid, packet]) );
+    var sendString;
+    try{
+      sendString = JSON.stringify([core.uuid, packet]);
+    }
+    catch(e){
+      console.log("ERROR SENDING PACKET", core.uuid, packet);
+    }
+
+    connection.write( sendString );
   }
 
 };
