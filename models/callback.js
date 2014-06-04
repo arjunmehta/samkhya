@@ -53,7 +53,7 @@ IncomingCallBack.prototype.executeCallBack = function(executorID, executor, args
     // debug("CallBack Executing", this.callBackID, this.total, this.list);
     this.callBack.apply(executor, args);
     this.total--;
-    delete this.list[executorID];
+    this.list[executorID] = undefined;
     this.evaluateDestroy();
   }
 };
@@ -63,7 +63,7 @@ IncomingCallBack.prototype.callBackError = function(executorID, executor, args){
   if(this.list[executorID] !== undefined){
     // debug("CallBack Error", this.callBackID, args);
     this.total--;
-    delete this.list[executorID];
+    this.list[executorID] = undefined;
     this.evaluateDestroy();
   }
 };

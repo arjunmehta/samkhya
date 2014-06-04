@@ -11,6 +11,7 @@ var debugInitialization = require('debug')('samsaara:connection:initialization')
 var debugCommunication = require('debug')('samsaara:connection:communication');
 var debugHeartbeat = require('debug')('samsaara:connection:heartbeat');
 
+var heartbeats = require('heartbeats');
 
 var core,
     samsaara,
@@ -51,7 +52,7 @@ function Connection(conn){
   this.initializeAttributes = new InitializedAttributes(this);
   this.initialized = false;
 
-  this.lastHeartBeat = 0;
+  this.pulse = heartbeats.heart("global").newPulse();
 
   this.connectionData = {};
 
@@ -93,13 +94,13 @@ Connection.prototype.handleMessage = function(raw_message){
   // this.score = ((connectionController.globalBeat - this.lastHeartBeat) > 0 ? 20000 : 0 ) + (this.score > 20000 ? 20000 : this.score) - (raw_message.length);
   // console.log(this.score, connectionController.globalBeat, this.lastHeartBeat);
 
-  this.lastHeartBeat = connectionController.globalBeat;
+  this.pulse.beat();
 
   debugCommunication("New Connection Message on "+ core.uuid, this.id, raw_message);
 
   switch(raw_message){
     case "H":
-      debugHeartbeat("Heartbeat...", this.id, this.lastHeartBeat, connectionController.globalBeat);
+      debugHeartbeat("Heartbeat...", this.id, this.pulse.present, this.pulse.heart.present);
       break;
     default:
       router.newConnectionMessage(this, raw_message);
@@ -245,7 +246,7 @@ Connection.prototype.completeInitialization = function(){
     debugInitialization(core.uuid, this.id, "Initialized");
 
     this.executeRaw({ns:"internal", func:"samsaaraInitialized", args: [true]}, function (confirmation){
-      samsaara.emit('initialized', this.connection);
+      samsaara.emit('initialized', this);
     });
   }
 };

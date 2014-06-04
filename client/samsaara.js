@@ -56,6 +56,9 @@ var samsaara = (function(samsaara){
   var nameSpaces = {};
 
 
+  samsaara.self = "samsaara.self";
+
+
   // initialize samsaara with a set of options (passed to server)
 
   samsaara.initialize = function(opts){
@@ -103,7 +106,6 @@ var samsaara = (function(samsaara){
         }
       }
     }
-
 
     if(module.messageRoutes){
       for(var routeName in module.messageRoutes){
@@ -372,7 +374,7 @@ var samsaara = (function(samsaara){
       else{
         samsaaraDebug(new Error("Samsaara Error: "+ func + " Is not a valid property of this Samsaara Object:" + JSON.stringify(messageObj) ));
         if(messageObj.callBack){
-          send({ns: "internal", func: "callItBackError", args: [messageObj.callBack, ["ERROR: Invalid Object on Client"]]}, "OWN:"+messageObj.owner);
+          send({ns: "internal", func: "callItBackError", args: [samsaara.self, messageObj.callBack, ["ERROR: Invalid Object on Client"]]}, "OWN:"+messageObj.owner);
         }
       }
     }
@@ -407,7 +409,7 @@ var samsaara = (function(samsaara){
 
       samsaaraDebugCallBack("executing callback", id, owner);
 
-      var packet = {ns:"internal", func:"callItBack", args: [id]};
+      var packet = {ns:"internal", func:"callItBack", args: [samsaara.self, id]};
       var args = Array.prototype.slice.call(arguments);
       
       if(typeof args[args.length-1] === "function"){
@@ -419,7 +421,7 @@ var samsaara = (function(samsaara){
       }
 
       send(packet, "OWN:"+owner);
-      delete outgoingCallBacks[id];           
+      delete outgoingCallBacks[id];
     };
 
     return theCallBack;
