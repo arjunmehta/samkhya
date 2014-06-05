@@ -74,7 +74,7 @@ function Connection(conn){
     samsaaraHeartBeat: connectionController.heartBeatThreshold
   }]));
 
-  samsaara.emit("connect", this);
+  samsaara.emit("connectionConnected", this);
 }
 
 
@@ -91,12 +91,9 @@ Connection.prototype.updateDataAttribute = function(attributeName, value) {
 
 Connection.prototype.handleMessage = function(raw_message){
 
-  // this.score = ((connectionController.globalBeat - this.lastHeartBeat) > 0 ? 20000 : 0 ) + (this.score > 20000 ? 20000 : this.score) - (raw_message.length);
-  // console.log(this.score, connectionController.globalBeat, this.lastHeartBeat);
+  debugCommunication("New Connection Message on "+ core.uuid, this.id, raw_message);
 
   this.pulse.beat();
-
-  debugCommunication("New Connection Message on "+ core.uuid, this.id, raw_message);
 
   switch(raw_message){
     case "H":
@@ -122,6 +119,7 @@ Connection.prototype.nameSpace = function(nameSpaceName){
     }
   };
 };
+
 
 // Method to execute methods on the client.
 
@@ -170,9 +168,6 @@ Connection.prototype.executeRaw = function(packet, callback){
 };
 
 
-
-
-
 function processPacket(packet, args){
 
   for (var i = 1; i < args.length-1; i++){
@@ -203,7 +198,7 @@ Connection.prototype.write = function(message){
 Connection.prototype.closeConnection = function(message){
 
   var connID = this.id;
-  samsaara.emit("disconnect", this);
+  samsaara.emit("connectionDisconnected", this);
 
   for(var i=0; i < closingMethods.length; i++){
     closingMethods[i](this);
@@ -246,7 +241,7 @@ Connection.prototype.completeInitialization = function(){
     debugInitialization(core.uuid, this.id, "Initialized");
 
     this.executeRaw({ns:"internal", func:"samsaaraInitialized", args: [true]}, function (confirmation){
-      samsaara.emit('initialized', this);
+      samsaara.emit('connectionInitialized', this);
     });
   }
 };

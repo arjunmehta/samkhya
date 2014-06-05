@@ -7,18 +7,13 @@
 
 
 // load dependencies
-
-var fs = require('fs');
-
-var uglify = require("uglify-js");
 var debug = require('debug')('samsaara:index');
 
+var fs = require('fs');
+var uglify = require("uglify-js");
 var helper = require('./lib/helper');
-
-
-// build and export our object (a new EventEmitter)
-
 var EventEmitter = require('events').EventEmitter;
+
 var samsaara = new EventEmitter();
 
 exports = module.exports = samsaara;
@@ -45,7 +40,7 @@ exports = module.exports = samsaara;
 
   // build up core
 
-  core.connectionController = require('./lib/connectionController').initialize(core);
+  core.connectionController = require('./lib/connections').initialize(core);
   core.communication = require('./lib/communication').initialize(core);
   core.router = require('./lib/router').initialize(core);
 
