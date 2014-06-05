@@ -39,7 +39,6 @@ function initialize(samsaaraCore){
 }
 
 
-
 function Connection(conn){
 
   var connection = this;
@@ -245,7 +244,6 @@ Connection.prototype.completeInitialization = function(){
     });
   }
 };
-
 
 
 
