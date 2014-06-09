@@ -84,7 +84,6 @@ var samsaara = (function(samsaara){
   };
 
 
-
   // load middleware modules
 
   samsaara.use = function(module){
@@ -144,8 +143,6 @@ var samsaara = (function(samsaara){
       }
     };
   };
-
-
 
 
   // local namespaces
@@ -412,7 +409,7 @@ var samsaara = (function(samsaara){
       var packet = {ns:"internal", func:"callItBack", args: [samsaara.self, id]};
       var args = Array.prototype.slice.call(arguments);
       
-      if(typeof args[args.length-1] === "function"){
+      if(typeof arguments[arguments.length-1] === "function"){
         var aCallBack = args.pop();
         packet = processPacket(packet, [null, args, aCallBack]);
       }
