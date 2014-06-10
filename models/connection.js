@@ -222,10 +222,15 @@ Connection.prototype.initialize = function(opts){
   var connection = this;
   var ia = this.initializeAttributes;
 
-  for(var i=0; i < initializationMethods.length; i++){
-    initializationMethods[i](opts, connection, ia);
+  if(initializationMethods.length > 0){
+    for(var i=0; i < initializationMethods.length; i++){
+      initializationMethods[i](opts, connection, ia);
+    }    
   }
-
+  else{
+    this.completeInitialization();
+  }
+  
   ia.ready = true;
 
 };

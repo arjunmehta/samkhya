@@ -6,6 +6,10 @@
  */
 
 
+var EventEmitter = require('events').EventEmitter;
+var SockJS = require("sockjs-client");
+
+
 var samsaara = (function(samsaara){
 
 
@@ -63,8 +67,6 @@ var samsaara = (function(samsaara){
 
   samsaara.initialize = function(opts){
 
-    console.log("Trying to initialize");
-
     options = opts;
 
     if(opts){
@@ -75,7 +77,6 @@ var samsaara = (function(samsaara){
         sockjs_url = opts.socksURL;
       }
     }
-
     initSock();
   };
 
@@ -277,7 +278,7 @@ var samsaara = (function(samsaara){
 
   function initSock(){
 
-    sockjs = new SockJS(sockjs_url);
+    sockjs = SockJS(sockjs_url);
 
     sockjs.onopen = function(){
 

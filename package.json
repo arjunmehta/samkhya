@@ -1,5 +1,6 @@
 {
   "name": "samsaara",
+  "browserify" : "browser.js",
   "private": true,
   "version": "0.1.0",
   "description": "A comprehensive module to create, maintain and manage active socket connections.",
@@ -24,11 +25,15 @@
     "debug" : "~0.8.1",
     "uglify-js": "~2.4.13"
   },
+  "bundledDependencies" : [ "sockjs-client" ],
   "devDependencies": {
-    "should": ">= 0.0.2"
+    "mocha-phantomjs": "*",
+    "express": "~4.0.0",
+    "mocha": "*",
+    "chai": "*"
   },
   "scripts": {
-    "test": "make test"
+    "test": "cp ./node_modules/mocha/mocha.css ./test       && cp ./node_modules/mocha/mocha.js ./test       && cp ./node_modules/chai/chai.js ./test       && (node test/test.js & sleep 3; ./node_modules/mocha-phantomjs/bin/mocha-phantomjs --local-storage-path=./ http://localhost:9999/testRunner.html)"
   },
   "license": "MIT",
   "main": "index",
@@ -38,7 +43,5 @@
   "readmeFilename": "Readme.md",
   "bugs": {
     "url": "https://github.com/arjunmehta/node-samsaara/issues"
-  },
-  "_id": "samsaara@0.1.0",
-  "_from": "samsaara@"
+  }
 }
