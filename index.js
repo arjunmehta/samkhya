@@ -19,7 +19,7 @@ var EventEmitter = require('events').EventEmitter;
 // set up websocket abstraction (currently sockjs)
 
 var sockjs = require('sockjs');
-var sockjsOpts = { socketPath: "/samsaara" };
+var sockjsOpts = { socketPath: "/samsaarasocket" };
 var sockjsServer = sockjs.createServer();
 
 
@@ -108,7 +108,7 @@ samsaara.initialize = function (server, app, options){
 
   if(options){
     core.options = options;
-    sockjsOpts.socketPath = options.socketPath || "/samsaara";
+    sockjsOpts.socketPath = options.socketPath || "/samsaarasocket";
   }
 
 
@@ -121,8 +121,7 @@ samsaara.initialize = function (server, app, options){
     addClientFileRoute("sockjs.js", __dirname + '/client/sockjs-0.3.min.js');
     addClientFileRoute("ee.js", __dirname + '/client/EventEmitter.min.js');
 
-    addClientScript(__dirname + '/client/ahead.js');
-    addClientScript(__dirname + '/node_modules/debug/debug.js');
+    addClientScript(__dirname + '/node_modules/debug/debugweb.js');
     addClientScript(__dirname + '/client/EventEmitter.min.js');
     addClientScript(__dirname + '/client/sockjs-0.3.min.js');
     addClientScript(__dirname + '/client/samsaara.js');

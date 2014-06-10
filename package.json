@@ -22,7 +22,7 @@
   "dependencies": {
     "sockjs": "~0.3.7",
     "heartbeats": "~0.1.0",
-    "debug" : "~0.8.1",
+    "debug" : "~1.0.1",
     "uglify-js": "~2.4.13"
   },
   "bundledDependencies" : [ "sockjs-client" ],

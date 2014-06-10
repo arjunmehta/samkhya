@@ -17,8 +17,9 @@ npm install samsaara
 ### Server Side
 ```javascript
 // create your server and initialize samsaara
-var server = http.createServer();
-var samsaara = require('samsaara').initialize(server);
+var app = require('express')();
+var server = http.createServer(app);
+var samsaara = require('samsaara').initialize(server, app);
 
 // create your server and initialize samsaara
 samsaara.on("newConnection", function(connection){
@@ -108,56 +109,73 @@ While you are welcome to find ways of organizing and accessing connections, nati
 #### samsaara.connections
 A list of all connections.
 
-#### samsaara.connection(`string:`connectionID`)
+#### samsaara.connection(connectionID`)
 Returns the connection with the supplied connection ID.
 
-#### connection.execute(`string:`methodName, args*, `function:`callback*)
+#### connection.execute(methodName, args,..., callback)
 Executes the method supplied by the string `methodName`. Pass in any number of arguments that the receiving function might expect, and end the call with a callback(!) if you'd like.
 
-#### connection.nameSpace(`string:`name).execute(`string:`methodName, args,..., `function:`callback*)
+#### connection.nameSpace(name).execute(methodName, args,..., callback)
 Executes a method within a namespace on the connection.
 
 ### Server: Exposing Methods
 Exposing methods to clients is what makes samsaara so powerful and fun. Methods that are exposed can take any non-circular javascript primitive, and even allows for callbacks. Just use the standard syntax for dealing with callbacks as the last argument to your functions.
 
-#### samsaara.expose(`object:`methodSet);
+#### samsaara.expose(methodSet);
 Exposes a set of methods to clients. These are placed in the main namespace.
 
 ### Server: Using Namespaces
 Namespaces are powerful because the enable so many things that might not be fully apparent at first. With namespaces you can create other primitive objects that route messages to specific namespaces. OR, they're also just a good way to keep your exposed methods organized.
 
-#### samsaara.createLocalNamespace(`string:`name, `object:`{exposedSet})
-#### samsaara.nameSpace(`string:`name)
-#### samsaara.nameSpace(`string:`name).expose()
+#### samsaara.createLocalNamespace(name, exposedSet)
+#### samsaara.nameSpace(name)
+#### samsaara.nameSpace(name).expose()
 
 
 ## Client API
 The client API is quite similar to the server's API. There's just less to it :)
 
 ### Client: Events
-#### samsaara.on("initialized", function(){})
+#### samsaara.on("initialized", handler)
 
 ### Client: Interacting with the Server Process
 Currently clients are only connected to a single server process at a time. Perhaps someone would like to write an extension that connects to multiple? :)
 
-#### samsaara.p.execute(`string:`methodName, args*, `function:`callback*)
-#### samsaara.p.nameSpace(`string:`name).execute(`string:`methodName, args,..., `function:`callback);
+#### samsaara.process.execute(methodName, args,..., callback)
+#### samsaara.process.nameSpace(name).execute(methodName, args,..., callback);
 
 ### Client: Exposing Methods
-Exposing methods to the server works the same as it does the opposite way!
+Exposing methods to the server works much the same way it works on the server.
 
-#### samsaara.expose(`object:`methodSet);
-Exposes a set of methods to clients. These are placed in the main namespace.
+#### samsaara.expose(methodSet);
 
 ### Client: Using Namespaces
 Namespaces are powerful because the enable so many things that might not be fully apparent at first. With namespaces you can create other primitive objects that route messages to specific namespaces. OR, they're also just a good way to keep your exposed methods organized.
 
-#### samsaara.createNamespace(`string:`name, `object:`{exposedSet})
-
-#### samsaara.nameSpace(`string:`name)
-Returns an object representing a **SERVER** namespace with which you can execute within.
-
-#### samsaara.nameSpace(`string:`name).expose()
+#### samsaara.createNamespace(name, exposedSet)
+#### samsaara.nameSpace(name)
+#### samsaara.nameSpace(name).expose()
 
 
+## License
+The MIT License (MIT)
 
+Copyright (c) 2014 Arjun Mehta
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
