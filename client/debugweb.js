@@ -1,4 +1,4 @@
-(function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
+!function(e){if("object"==typeof exports&&"undefined"!=typeof module)module.exports=e();else if("function"==typeof define&&define.amd)define([],e);else{var f;"undefined"!=typeof window?f=window:"undefined"!=typeof global?f=global:"undefined"!=typeof self&&(f=self),f.debug=e()}}(function(){var define,module,exports;return (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);throw new Error("Cannot find module '"+o+"'")}var f=n[o]={exports:{}};t[o][0].call(f.exports,function(e){var n=t[o][1][e];return s(n?n:e)},f,f.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(_dereq_,module,exports){
 
 /**
  * This is the web browser implementation of `debug()`.
@@ -6,8 +6,9 @@
  * Expose `debug()` as the module.
  */
 
-exports = module.exports = require('./debug');
+exports = module.exports = _dereq_('./debug');
 exports.log = log;
+exports.formatArgs = formatArgs;
 exports.save = save;
 exports.load = load;
 exports.useColors = useColors;
@@ -48,14 +49,14 @@ exports.formatters.j = function(v) {
   return JSON.stringify(v);
 };
 
+
 /**
- * Invokes `console.log()` when available.
- * No-op when `console.log` is not a "function".
+ * Colorize log arguments if enabled.
  *
  * @api public
  */
 
-function log() {
+function formatArgs() {
   var args = arguments;
   var useColors = this.useColors;
 
@@ -66,33 +67,43 @@ function log() {
     + (useColors ? '%c ' : ' ')
     + '+' + exports.humanize(this.diff);
 
-  if (useColors) {
-    var c = 'color: ' + this.color;
-    args = [args[0], c, ''].concat(Array.prototype.slice.call(args, 1));
+  if (!useColors) return args
 
-    // the final "%c" is somewhat tricky, because there could be other
-    // arguments passed either before or after the %c, so we need to
-    // figure out the correct index to insert the CSS into
-    var index = 0;
-    var lastC = 0;
-    args[0].replace(/%[a-z%]/g, function(match) {
-      if ('%%' === match) return;
-      index++;
-      if ('%c' === match) {
-        // we only are interested in the *last* %c
-        // (the user may have provided their own)
-        lastC = index;
-      }
-    });
+  var c = 'color: ' + this.color;
+  args = [args[0], c, ''].concat(Array.prototype.slice.call(args, 1));
 
-    args.splice(lastC, 0, c);
-  }
+  // the final "%c" is somewhat tricky, because there could be other
+  // arguments passed either before or after the %c, so we need to
+  // figure out the correct index to insert the CSS into
+  var index = 0;
+  var lastC = 0;
+  args[0].replace(/%[a-z%]/g, function(match) {
+    if ('%%' === match) return;
+    index++;
+    if ('%c' === match) {
+      // we only are interested in the *last* %c
+      // (the user may have provided their own)
+      lastC = index;
+    }
+  });
 
+  args.splice(lastC, 0, c);
+  return args;
+}
+
+/**
+ * Invokes `console.log()` when available.
+ * No-op when `console.log` is not a "function".
+ *
+ * @api public
+ */
+
+function log() {
   // This hackery is required for IE8,
   // where the `console.log` function doesn't have 'apply'
   return 'object' == typeof console
     && 'function' == typeof console.log
-    && Function.prototype.apply.call(console.log, console, args);
+    && Function.prototype.apply.call(console.log, console, arguments);
 }
 
 /**
@@ -133,7 +144,7 @@ function load() {
 
 exports.enable(load());
 
-},{"./debug":2}],2:[function(require,module,exports){
+},{"./debug":2}],2:[function(_dereq_,module,exports){
 
 /**
  * This is the common logic for both the Node.js and web browser
@@ -147,7 +158,7 @@ exports.coerce = coerce;
 exports.disable = disable;
 exports.enable = enable;
 exports.enabled = enabled;
-exports.humanize = require('ms');
+exports.humanize = _dereq_('ms');
 
 /**
  * The currently active debug mode names, and names to skip.
@@ -246,7 +257,11 @@ function debug(namespace) {
       return match;
     });
 
-    exports.log.apply(self, args);
+    if ('function' === typeof exports.formatArgs) {
+      args = exports.formatArgs.apply(self, args);
+    }
+    var logFn = exports.log || enabled.log || console.log.bind(console);
+    logFn.apply(self, args);
   }
   enabled.enabled = true;
 
@@ -328,7 +343,7 @@ function coerce(val) {
   return val;
 }
 
-},{"ms":3}],3:[function(require,module,exports){
+},{"ms":3}],3:[function(_dereq_,module,exports){
 /**
  * Helpers.
  */
@@ -442,3 +457,5 @@ function plural(ms, n, name) {
 }
 
 },{}]},{},[1])
+(1)
+});
