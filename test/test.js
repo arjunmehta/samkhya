@@ -12,7 +12,7 @@ app.use("/", express.static( path.resolve(__dirname) ));
 
 var samsaara = require('samsaara');
 var samsaaraOpts = {
-  socketPath: "/echo",
+  socketPath: "/samsaaraTest",
   heartBeatThreshold: 11000
 };
 

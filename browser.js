@@ -38,7 +38,7 @@ var samsaara = (function(samsaara){
   var remoteOptions = {};
   var options;
 
-  var sockjs_url = '/echo';
+  var sockjs_url = '/samsaara';
   var sockjs = {};
   var sockConnectionTimerTime = 0;
   var sockConnectionTimer = null;

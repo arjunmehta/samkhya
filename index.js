@@ -19,7 +19,7 @@ var EventEmitter = require('events').EventEmitter;
 // set up websocket abstraction (currently sockjs)
 
 var sockjs = require('sockjs');
-var sockjsOpts = { socketPath: "/echo" };
+var sockjsOpts = { socketPath: "/samsaara" };
 var sockjsServer = sockjs.createServer();
 
 
@@ -108,7 +108,7 @@ samsaara.initialize = function (server, app, options){
 
   if(options){
     core.options = options;
-    sockjsOpts.socketPath = options.socketPath || "/echo";
+    sockjsOpts.socketPath = options.socketPath || "/samsaara";
   }
 
 

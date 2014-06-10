@@ -52,7 +52,7 @@ describe("Initialize Samsaara", function () {
 
   before(function() {
     var samsaaraOptions = {
-      socksURL: "/echo"
+      socketPath: "/samsaaraTest"
     };
 
     samsaara.initialize(samsaaraOptions);

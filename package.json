@@ -33,7 +33,8 @@
     "chai": "*"
   },
   "scripts": {
-    "test": "cp ./node_modules/mocha/mocha.css ./test       && cp ./node_modules/mocha/mocha.js ./test       && cp ./node_modules/chai/chai.js ./test       && (node test/test.js & sleep 3; ./node_modules/mocha-phantomjs/bin/mocha-phantomjs --local-storage-path=./ http://localhost:9999/testRunner.html)"
+    "test": "cp ./node_modules/mocha/mocha.css ./test       && cp ./node_modules/mocha/mocha.js ./test       && cp ./node_modules/chai/chai.js ./test       && (node test/test.js & sleep 3; ./node_modules/mocha-phantomjs/bin/mocha-phantomjs --local-storage-path=./ http://localhost:9999/testRunner.html)",
+    "killothers": "pkill node && pkill nodejs"
   },
   "license": "MIT",
   "main": "index",
