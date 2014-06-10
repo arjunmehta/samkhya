@@ -121,7 +121,7 @@ samsaara.initialize = function (server, app, options){
     addClientFileRoute("sockjs.js", __dirname + '/client/sockjs-0.3.min.js');
     addClientFileRoute("ee.js", __dirname + '/client/EventEmitter.min.js');
 
-    addClientScript(__dirname + '/node_modules/debug/debugweb.js');
+    addClientScript(__dirname + '/client/debugweb.js');
     addClientScript(__dirname + '/client/EventEmitter.min.js');
     addClientScript(__dirname + '/client/sockjs-0.3.min.js');
     addClientScript(__dirname + '/client/samsaara.js');
