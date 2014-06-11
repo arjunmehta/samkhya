@@ -138,15 +138,17 @@ samsaara.initialize = function (server, app, options){
 
   // generate a concatenated and minified client script file for core and all submodules
 
-  var clientUglified = uglify.minify(modules.clientStack, {outSourceMap: "samsaara.js.map"});
+  var clientUglified = uglify.minify(modules.clientStack, {outSourceMap: "samsaara.map"});
   var clientFilePath = __dirname + '/client/samsaara.min.js';
-  var clientMapPath = __dirname + '/client/samsaara.js.map';
+  var clientMapPath = __dirname + '/client/samsaara.map';
+
+  clientUglified.code += "//# sourceMappingURL=/samsaara/samsaara.map";
 
   fs.writeFileSync(clientFilePath, clientUglified.code);
   fs.writeFileSync(clientMapPath, clientUglified.map);
 
   addClientFileRoute("samsaara.js", clientFilePath);
-  addClientFileRoute("samsaara.js.map", clientMapPath);
+  addClientFileRoute("samsaara.map", clientMapPath);
 
 
   // open up socket port and listen for new connections

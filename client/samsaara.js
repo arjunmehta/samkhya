@@ -167,6 +167,8 @@ var samsaara = (function(samsaara){
   };
 
 
+  console.log("Testing Map 171")
+
   // attributes of middleware that are initialized to set "preinitialized" state to start sending messages.
 
   var attributes = {initializedAttributes : {init: false} };
