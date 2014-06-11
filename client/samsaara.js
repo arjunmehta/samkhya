@@ -63,8 +63,6 @@ var samsaara = (function(samsaara){
 
   samsaara.initialize = function(opts){
 
-    console.log("Trying to initialize");
-
     options = opts;
 
     if(opts){
