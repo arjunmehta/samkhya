@@ -1,46 +1,45 @@
 {
   "name": "samsaara",
-  "browserify" : "browser.js",
-  "private": true,
-  "version": "0.1.0",
+  "browser": "browser.js",
+  "version": "1.0.0",
   "description": "A comprehensive module to create, maintain and manage active socket connections.",
   "keywords": [
     "sockjs",
     "now",
+    "socket.io",
+    "real time communication",
     "connections",
     "referencing",
     "everyone"
   ],
   "author": {
     "name": "Arjun Mehta",
-    "email": "arjun@newlief.com"
+    "email": "arjun@arjunmehta.net"
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/arjunmehta/node-samsaara.git"
   },
   "dependencies": {
-    "sockjs": "~0.3.7",
-    "heartbeats": "~0.1.0",
-    "debug" : "~1.0.1",
-    "uglify-js": "~2.4.13"
+    "debug": "~1.0.1",
+    "heartbeats": "~1.0.0",
+    "sockjs": "~0.3.15",
+    "sockjs-client": "~1.0.0"
   },
-  "bundledDependencies" : [ "sockjs-client" ],
   "devDependencies": {
-    "mocha-phantomjs": "*",
+    "browserify": "~10.2.4",
+    "chai": "~3.0.0",
     "express": "~4.0.0",
-    "mocha": "*",
-    "chai": "*"
+    "mocha": "~2.2.5",
+    "mocha-phantomjs": "~3.5.3"
   },
   "scripts": {
     "test": "cp ./node_modules/mocha/mocha.css ./test       && cp ./node_modules/mocha/mocha.js ./test       && cp ./node_modules/chai/chai.js ./test       && (node test/test.js & sleep 3; ./node_modules/mocha-phantomjs/bin/mocha-phantomjs --local-storage-path=./ http://localhost:9999/testRunner.html)",
+    "testnew": "mocha test/test.js && browserify test/browser_test.js -o test/browser_test_compiled.js && echo '\n  Testing in Browser' && mocha-phantomjs test/browser.html",
     "killothers": "pkill node && pkill nodejs"
   },
   "license": "MIT",
-  "main": "index",
-  "engines": {
-    "node": ">= 0.6.x"
-  },
+  "main": "main",
   "readmeFilename": "Readme.md",
   "bugs": {
     "url": "https://github.com/arjunmehta/node-samsaara/issues"

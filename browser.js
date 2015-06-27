@@ -49,7 +49,7 @@ var samsaara = (function(samsaara){
   var functionQueue = [];
 
   var outgoingCallBacks = {};
-  var incomingCallBacks = {};
+  var incoming_callbacks = {};
 
   var initializationMethods = [];
   var internalMethods = {};
@@ -225,7 +225,7 @@ var samsaara = (function(samsaara){
 
     if(typeof theCallBack === "function"){
       var callBackID = makeIdAlpha(12);
-      incomingCallBacks[callBackID] = {callBack: theCallBack};
+      incoming_callbacks[callBackID] = {callBack: theCallBack};
       packet.callBack = callBackID;
     }
 
@@ -458,8 +458,8 @@ var samsaara = (function(samsaara){
       args.push(arguments[arguments.length-1]);
     }
 
-    incomingCallBacks[id].callBack.apply(incomingCallBacks[id].from, args);
-    delete incomingCallBacks[id];
+    incoming_callbacks[id].callBack.apply(incoming_callbacks[id].from, args);
+    delete incoming_callbacks[id];
   };
 
   internalMethods.reportError = function(code, message){
