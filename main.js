@@ -4,19 +4,21 @@
 
 
 var EventEmitter = require('events').EventEmitter;
+var util = require('util');
 
-var debug = require('debug')('samsaara:index'),
-    util = require('util');
+var uuid = require('utils/util.js').createPseudoUuid(8);
 
-var middleware = require('./lib/middleware');
+var transport,
 
-var connectionController,
+    connectionController,
     communicationController,
-    router,
-    constructors,
+    routeController,
+    middlewareLoader,
+
     Connection = require('./models/connection'),
     NameSpace = require('./models/namespace'),
     IncomingCallBack = require('./models/callback');
+
 
 util.inherits(Samsaara, EventEmitter);
 
@@ -25,53 +27,35 @@ function Samsaara() {
 
     EventEmitter.call(this);
 
-    this.uuid = makeAlphaNumericalId(8);
-    this.transport = null;    
-
-    connectionController = require('./lib/connectionController')(this.uuid);
-    communicationController = new require('./lib/communicationController')(this.uuid);
-    router = new require('./lib/router')(this.uuid, communicationController);
+    connectionController = require('./lib/connectionController')(uuid);
+    communicationController = require('./lib/communicationController')(uuid);
+    routeController = require('./lib/routeController')(uuid, communicationController);
+    middlewareLoader = require('./lib/middlewareLoader')(this, connectionController, communicationController, routeController);
 
     Connection.initialize(this);
     NameSpace.initialize(this);
     IncomingCallBack.initialize(this);
 
     this.capability = {};
-    this.modules = [];   
-
     this.connection = connectionController.connection;
     this.nameSpace = communicationController.nameSpace;
     this.createNamespace = communicationController.createNamespace;
     this.expose = communicationController.expose;
+    this.use = middlewareLoader.use;
 }
-
-Samsaara.prototype.use = function(module) {
-    this.modules.push(module);
-    return this;
-};
 
 Samsaara.prototype.initialize = function(opts) {
 
     opts = opts || {};
+    middleware.load(modules);
+    transport = opts.socket;
 
-    middleware.load(this);
-    this.transport = opts.socket;
+    transport.on('connection', function(conn) {
+        connectionController.createConnection(conn);
+    });
 
     return this;
 };
-
-
-function makeAlphaNumericalId(idLength) {
-
-    var text = '';
-    var possible = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-
-    for (var i = 0; i < idLength; i++) {
-        text += possible.charAt(Math.floor(Math.random() * possible.length));
-    }
-
-    return text;
-}
 
 
 exports = module.exports = new Samsaara();
