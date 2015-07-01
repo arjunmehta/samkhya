@@ -28,11 +28,11 @@ function Samsaara() {
     EventEmitter.call(this);
 
     connectionController = require('./lib/connectionController')(uuid);
-    communicationController = require('./lib/communicationController')(uuid);
+    communicationController = require('./lib/communicationController')(uuid, this, connectionController);
     routeController = require('./lib/routeController')(uuid, communicationController);
     middlewareLoader = require('./lib/middlewareLoader')(this, connectionController, communicationController, routeController);
 
-    Connection.initialize(this);
+    Connection.initialize(uuid, this, communicationController, connectionController, routeController);
     NameSpace.initialize(this);
     IncomingCallBack.initialize(this);
 
@@ -47,7 +47,7 @@ function Samsaara() {
 Samsaara.prototype.initialize = function(opts) {
 
     opts = opts || {};
-    middleware.load(modules);
+    middleware.load();
     transport = opts.socket;
 
     transport.on('connection', function(conn) {
@@ -58,4 +58,4 @@ Samsaara.prototype.initialize = function(opts) {
 };
 
 
-exports = module.exports = new Samsaara();
+module.exports = new Samsaara();

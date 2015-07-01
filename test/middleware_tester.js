@@ -9,13 +9,14 @@ var debug = require('debug')('samsaara:groups:main');
 var samsaara;
 
 
-module.exports = exports = {
+module.exports = {
 
     name: "middleware_unique_name",
     init_required: true,
 
-    initialize: function(samsaara_core) {
-        samsaara = samsaara_core;
+    initialize: function(samsaara_extender) {
+        samsaara = samsaara_extender.samsaara_core;
+        samsaara_extender.setCoreMethods(coreMethods);
         return this;
     },
 
