@@ -1,71 +1,50 @@
 # samsaara
-**Version 0.1.0 (Help Wanted)**
+
+[![Build Status](https://travis-ci.org/arjunmehta/node-samsaara.svg?branch=master)](https://travis-ci.org/arjunmehta/node-samsaara)
+
+![samsaara title image](https://raw.githubusercontent.com/arjunmehta/node-samsaara/image/image/splash.png)
 
 A functional, object-oriented bridge to manage, manipulate and interact with large sets of real-time connections.
 
-Extends websockets, or websockets based interfaces (sockjs, engine.io etc.) to infinite extensibility.
+But it does oh so much more! More specifically:
 
-Samsaara, at its core, is just a simple realtime connection manager that allows and enables the execution of methods from server to client, or client to server. Its main purpose is to lay syntactic groundwork for working and communicating with large sets of connections reliably.
+- **Extends websockets, or websockets based interfaces (sockjs, engine.io etc.) to infinite extensibility.**
+- **Execute client methods from server and server methods on client using classic functional patterns (including the passing of callbacks).**
+- **Middleware engine for object-oriented extensibility.**
+- **A very simple, easy to use, scalable interface.**
 
-Its extensibility and unique API make it easy and natural to use. There are a number of middleware extensions already available that add the ablity to create and manage connection groups, share and expose resources, authenticate connections, and even create entirely new systemic contexts(!). With scalability in mind, samsaara's protocol allows for a balance between efficient message passing between processes and flexibility with message handling.
-
-However, here we'll talk about the core samsaara module. Once you get the basics, definitely have a look at the middleware available.
-
-## Basic Usage
+## Installation
 ```bash
 npm install --save samsaara
 ```
 
-### Server Side
-```javascript
-// create your server, socket and initialize samsaara
+## Basic Usage
 
-var ws = new WebSocket('ws://www.host.com/path');
+### Initialize Server
+
+```javascript
+var ws = new WebSocket('ws://localhost/socket');
 var samsaara = require('samsaara').initialize({socket: ws});
 
-// create your server and initialize samsaara
-samsaara.on('connection', function(connection){
-  connection.execute('ja', Date.now());
-});
-
-// expose server side methods to all connected clients
 samsaara.expose({  
-  eka: function(aString, aNumber, anObject, anArray){
-    this.execute('response', 'hi');
-  },
-  dvau: function(callback){
-    callback('hi');
+  test: function(a_string, number_array, cb){
+    // this.executor.execute('response')('hi');
+    console.log(a_string, number_array, cb({any: 'data'}, function(){
+
+    }));
   }
 });
-
-server.listen(9999);
 ```
 
 ### Client Side
-If you're using browserify or something of the sort, just require samsaara in your client script.
+If you're using browserify or something of the sort, just require samsaara in your client script and send along your socket.
 
 ```javascript
-var samsaara = require('samsaara');
+var ws = new WebSocket('ws://localhost/socket');
+var samsaara = require('samsaara').initialize({socket: ws});
 
-// initialize samsaara
-samsaara.initialize();
-
-// exposes a set of methods the server can access on this process
-samsaara.expose({
-  ja: function(connectionDate){
-    console.log('connected at:', connectionDate);
-  },
-  hi: function(message){
-    console.log('direct message:', message);
-  }
-});
-
-// executes exposed method on server and passes arguments to it
-samsaara.execute('eka', 'aString', 987654321, {a: 'a', b: 111}, [111, 222, 333]);
-
-// executes exposed method on server with a callback
-samsaara.execute('dvau', function(message){
-  console.log('callback message:', message);
+samsaara.execute('test')('testing samsaara', [111, 222, 333], function(result){
+  console.log(result);
 });
 ```
 

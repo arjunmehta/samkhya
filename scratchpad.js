@@ -2,16 +2,28 @@
 
 // API
 
-// samsaara.groups.group('').namespace('').execute();
+samsaara.connection(this.id).execute('something')(argA, argB);
 
-samsaara.group('').execute('');
-samsaara.group('').namespace('').execute();
+var connection = samsaara.connection(this.id);
+connection.execute('something')(argA, argB);
 
-samsaara.connection().execute();
+this.execute('something')(argA, argB);
 
-connection.execute('');
 
-samsaara.group('all').execute();
-samsaara.groups.allbut();
-samsaara.groups.all().execute();
+// Groups
+
+// Execute on a group's core namespace
+samsaara.group('everyone').execute('something')(argA, argB);
+
+// Execute on a group except certain connections
+samsaara.group('everyone').except([this.id]).execute('something')(argA, argB);
+
+// Execute on a specific namespace of a group
+samsaara.group('everyone').namespace('this').execute('something')(argA, argB);
+
+// Execute on a specific namespace of a group
+samsaara.group('everyone').except([this.id]).namespace('this').execute('something')(argA, argB);
+
+// Shortcut for everyone except connection
+connection.broadcast('whatever')(argA, argB);
 
