@@ -1,4 +1,4 @@
-// samsaara
+// samsaara - client
 // Copyright(c) 2013-2015 Arjun Mehta <arjun@arjunmehta.net>
 // MIT Licensed
 
@@ -36,20 +36,23 @@ function Samsaara() {
     NameSpace.initialize(this);
     IncomingCallBack.initialize(this, communicationController);
 
-    this.connection = connectionController.connection;
-    this.newConnection = connectionController.newConnection;
     this.nameSpace = communicationController.nameSpace;
     this.createNamespace = communicationController.createNamespace;
     this.expose = communicationController.expose;
     this.use = middlewareLoader.use;
-
-    this.opts = {};
 }
 
 Samsaara.prototype.initialize = function(opts) {
-    this.opts = opts || {};
+
+    var socket;
+    opts = opts || {};
+    socket = opts.socket;
+
     middlewareLoader.load();
-    initializeServer(this, opts);
+
+    this.core = connectionController.newConnection(socket);
+
+    initializeClient(this, opts);
 
     return this;
 };
@@ -57,36 +60,28 @@ Samsaara.prototype.initialize = function(opts) {
 
 // Initialize server instance
 
-function initializeServer(samsaara, opts) {
-    Connection.preInitializationMethods.push(initializeConnection);
+function initializeClient(samsaara, opts) {
     routeController.addRoute('INIT', initializationRouteHandler);
-    routeController.addRoute(pseudoUuid, executionRouteHandler);
-
-    // Set up heartbeat check for dead connections here
 }
 
-
-// Add a method to execute when new Connection is made.
-
-function initializeConnection(connection) {
-    routeController.routePacket(connection.socket, 'INIT', {
-        samsaaraID: this.id,
-        samsaaraOwner: this.owner,
-        samsaaraHeartBeat: communicationController.heartBeatThreshold
-    });
-}
-
-
-// Local route handlers
 
 function initializationRouteHandler(connection, headerbits, incomingPacket) {
-    var parsedPacket = parser.parsePacket(incomingPacket);
+    var parsedPacket = parser.parsePacket(incomingPacket),
+        connectionID,
+        homeRoute,
+        heartbeatInterval;
 
-    if (parsedPacket !== undefined && parsedPacket.opts !== undefined) {
-        connectionController.initializeConnection(connection, parsedPacket.opts);
-        // connection.initialize(parsedPacket.opts);
+    if (typeof parsedPacket === 'object') {
+        connectionID = parsedPacket.connectionID;
+        homeRoute = parsedPacket.homeRoute;
+        heartbeatInterval = parsedPacket.heartbeatInterval;
+
+        connectionController.setHomeRoute(connection, parsedPacket.homeRoute);
+        routeController.addRoute(connectionID, executionRouteHandler);
+        // set up heartbeat to send on socket every X
     }
 }
+
 
 function executionRouteHandler(connection, headerbits, incomingPacket) {
     var parsedPacket = parser.parsePacket(incomingPacket);

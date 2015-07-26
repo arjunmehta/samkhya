@@ -60,7 +60,6 @@
     "no-sparse-arrays": 2,
     "no-unreachable": 2,
     "use-isnan": 2,
-    "block-scoped-var": 1,
 
     // best practices
     "consistent-return": 2,
