@@ -61,7 +61,6 @@ function initializeServer(samsaara, opts) {
     Connection.preInitializationMethods.push(initializeConnection);
     routeController.addRoute('INIT', initializationRouteHandler);
     routeController.addRoute(pseudoUuid, executionRouteHandler);
-
     // Set up heartbeat check for dead connections here
 }
 
@@ -70,9 +69,9 @@ function initializeServer(samsaara, opts) {
 
 function initializeConnection(connection) {
     routeController.routePacket(connection.socket, 'INIT', {
-        samsaaraID: this.id,
-        samsaaraOwner: this.owner,
-        samsaaraHeartBeat: communicationController.heartBeatThreshold
+        connectionOwner: connection.owner,
+        connectionRouteID: connection.routeID,
+        heartbeatInterval: connectionController.heartbeatInterval
     });
 }
 

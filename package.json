@@ -23,8 +23,6 @@
   "dependencies": {
     "debug": "~1.0.1",
     "heartbeats": "~1.0.0",
-    "sockjs": "~0.3.15",
-    "sockjs-client": "~1.0.0",
     "uuid": "^2.0.1"
   },
   "devDependencies": {

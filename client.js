@@ -5,13 +5,15 @@
 
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
+var heartbeats = require('heartbeats');
 
 var pseudoUuid = require('utils/helper').createPseudoUuid(8);
 
 var connectionController,
     communicationController,
     routeController,
-    middlewareLoader;
+    middlewareLoader,
+    heart;
 
 var Connection = require('./lib/connection'),
     NameSpace = require('./lib/namespace'),
@@ -49,10 +51,8 @@ Samsaara.prototype.initialize = function(opts) {
     socket = opts.socket;
 
     middlewareLoader.load();
-
     this.core = connectionController.newConnection(socket);
-
-    initializeClient(this, opts);
+    initializeClient(this, this.core, opts);
 
     return this;
 };
@@ -60,28 +60,27 @@ Samsaara.prototype.initialize = function(opts) {
 
 // Initialize server instance
 
-function initializeClient(samsaara, opts) {
+function initializeClient(samsaara, core, opts) {
     routeController.addRoute('INIT', initializationRouteHandler);
 }
 
 
 function initializationRouteHandler(connection, headerbits, incomingPacket) {
     var parsedPacket = parser.parsePacket(incomingPacket),
-        connectionID,
-        homeRoute,
+        connectionOwner,
+        connectionRouteID,
         heartbeatInterval;
 
     if (typeof parsedPacket === 'object') {
-        connectionID = parsedPacket.connectionID;
-        homeRoute = parsedPacket.homeRoute;
+        connectionOwner = parsedPacket.connectionOwner;
+        connectionRouteID = parsedPacket.connectionRouteID;
         heartbeatInterval = parsedPacket.heartbeatInterval;
 
-        connectionController.setHomeRoute(connection, parsedPacket.homeRoute);
-        routeController.addRoute(connectionID, executionRouteHandler);
-        // set up heartbeat to send on socket every X
+        connectionController.setRouteID(connection, connectionOwner);
+        routeController.addRoute(connectionRouteID, executionRouteHandler);
+        setHeartBeat(connection, heartbeatInterval);
     }
 }
-
 
 function executionRouteHandler(connection, headerbits, incomingPacket) {
     var parsedPacket = parser.parsePacket(incomingPacket);
@@ -92,5 +91,13 @@ function executionRouteHandler(connection, headerbits, incomingPacket) {
     }
 }
 
+function setHeartBeat(connection, heartbeatInterval) {
+    heart = heartbeats.createHeart(heartbeatInterval);
+    heart.createEvent(1, function() {
+        if (connection.outgoingPulse.missedBeats() > 0) {
+            connection.socket.send('H');
+        }
+    });
+}
 
 module.exports = new Samsaara();
