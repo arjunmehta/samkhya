@@ -96,5 +96,22 @@ function executionRouteHandler(connection, headerbits, incomingPacket) {
     }
 }
 
+ConnectionController.prototype.checkForDeadConnections = function() {
+
+    var threshold = Math.floor(25000 / 10000),
+        connections = this.connections,
+        connection,
+        connectionID;
+
+    for (connectionID in connections) {
+
+        connection = connections[connectionID];
+
+        if (connection.owner === samsaaraID && connection.pulse.missedBeats() > threshold) {
+            connection.conn.close(111, 'Flatlining Connection');
+        }
+    }
+};
+
 
 module.exports = new Samsaara();

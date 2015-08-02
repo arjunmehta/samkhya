@@ -26,3 +26,5 @@ node_modules
 
 scratchpad.js
 browser-old.js
+
+test/tester.js

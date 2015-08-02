@@ -65,6 +65,8 @@ function initializeClient(samsaara, core, opts) {
 }
 
 
+// Initialization Methods
+
 function initializationRouteHandler(connection, headerbits, incomingPacket) {
     var parsedPacket = parser.parsePacket(incomingPacket),
         connectionOwner,
@@ -99,5 +101,6 @@ function setHeartBeat(connection, heartbeatInterval) {
         }
     });
 }
+
 
 module.exports = new Samsaara();
