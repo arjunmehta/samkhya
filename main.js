@@ -1,8 +1,3 @@
-// samsaara
-// Copyright(c) 2013-2015 Arjun Mehta <arjun@arjunmehta.net>
-// MIT Licensed
-
-
 var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 var heartbeats = require('heartbeats');
@@ -12,9 +7,8 @@ var parser = require('./lib/parser');
 
 var routeController = require('./lib/routeController'),
     connectionController = require('./lib/connectionController'),
-    communicationController = require('./lib/communicationController'),
-    middlewareLoader = require('./lib/middlewareLoader'),
-    transportMediator = require('./transportMediator');
+    executionController = require('./lib/executionController'),
+    middlewareLoader = require('./lib/middlewareLoader');
 
 var Connection = require('./lib/connection'),
     NameSpace = require('./lib/namespace'),
@@ -32,19 +26,19 @@ function Samsaara() {
     EventEmitter.call(this);
 
     routeController.initialize(parser);
-    connectionController.initialize(coreID);
-    communicationController.initialize(coreID, this, connectionController);
-    middlewareLoader.initialize(this, connectionController, communicationController, routeController);
+    connectionController.initialize(coreID, this);
+    executionController.initialize(this, routeController);
+    middlewareLoader.initialize(this, connectionController, executionController, routeController);
 
-    Connection.initialize(coreID, this, communicationController, connectionController, routeController);
-    NameSpace.initialize(this);
-    IncomingCallBack.initialize(this, communicationController);
+    Connection.initialize(executionController);
+    NameSpace.initialize();
+    IncomingCallBack.initialize(executionController);
 
     this.connection = connectionController.connection;
     this.newConnection = connectionController.newConnection;
-    this.nameSpace = communicationController.nameSpace;
-    this.createNamespace = communicationController.createNamespace;
-    this.expose = communicationController.expose;
+    this.nameSpace = executionController.nameSpace;
+    this.createNamespace = executionController.createNamespace;
+    this.expose = executionController.expose;
     this.use = middlewareLoader.use;
 
     this.opts = {};
@@ -107,11 +101,12 @@ function executionRouteHandler(connection, headerbits, incomingPacket) {
 
     if (parsedPacket !== undefined && parsedPacket.func !== undefined) {
         parsedPacket.sender = connection.id;
-        communicationController.executeFunction(connection, connection, parsedPacket);
+        executionController.executeFunction(connection, connection, parsedPacket);
     }
 }
 
 function startHeartbeatMonitor() {
+    
     heart.createEvent(3, function() {
         var connections = connectionController.connections,
             connection,
