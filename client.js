@@ -2,21 +2,16 @@ var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 var heartbeats = require('heartbeats');
 
-var helper = require('./utils/helper');
-var parser = require('./lib/parser');
+var routeController = require('./lib/controllers/routeController');
+var connectionController = require('./lib/controllers/connectionController');
+var executionController = require('./lib/controllers/executionController');
 
-var routeController = require('./lib/routeController'),
-    connectionController = require('./lib/connectionController'),
-    executionController = require('./lib/executionController'),
-    middlewareLoader = require('./lib/middlewareLoader');
+var helper = require('./lib/utils/helper');
+var parser = require('./lib/utils/parser');
+var middleware = require('./lib/utils/middleware');
 
-var Connection = require('./lib/connection'),
-    NameSpace = require('./lib/namespace'),
-    IncomingCallBack = require('./lib/callback');
-
-var coreID = helper.createPseudoUuid(8),
-    heart;
-
+var coreID = helper.createPseudoUuid(8);
+var heart;
 
 util.inherits(Samsaara, EventEmitter);
 
@@ -25,23 +20,19 @@ function Samsaara() {
 
     EventEmitter.call(this);
 
-    routeController.initialize(parser);
-    connectionController.initialize(coreID, this);
-    executionController.initialize(this, routeController);
-    middlewareLoader.initialize(this, connectionController, executionController, routeController);
+    routeController.setParser(parser);
+    connectionController.initialize(this, coreID);
+    executionController.initialize(this);
 
-    Connection.initialize(coreID, this, executionController, connectionController, routeController);
-    NameSpace.initialize();
-    IncomingCallBack.initialize(executionController);
+    middleware.initialize(this);
 
     this.nameSpace = executionController.nameSpace;
     this.createNamespace = executionController.createNamespace;
     this.expose = executionController.expose;
-    this.use = middlewareLoader.use;
+    this.use = middleware.use;
 }
 
 Samsaara.prototype.initialize = function(opts) {
-
     var socket;
     opts = opts || {};
     socket = opts.socket;
@@ -49,7 +40,7 @@ Samsaara.prototype.initialize = function(opts) {
     connectionController.setTransport(opts.socketType || 'ws', false);
     heart = heartbeats.createHeart(2000, 'samsaara');
 
-    middlewareLoader.load();
+    middleware.load();
     this.core = connectionController.newConnection(socket);
     initializeClient(this, this.core, opts);
 
@@ -57,14 +48,14 @@ Samsaara.prototype.initialize = function(opts) {
 };
 
 
-// Initialize server instance
+// Initialize client instance
 
 function initializeClient(samsaara, core, opts) {
     routeController.addRoute('INIT', initializationRouteHandler);
 }
 
 
-// Initialization Methods
+// Route Methods
 
 function initializationRouteHandler(connection, headerbits, incomingPacket) {
     var parsedPacket = parser.parsePacket(incomingPacket),
@@ -77,9 +68,9 @@ function initializationRouteHandler(connection, headerbits, incomingPacket) {
         connectionRouteID = parsedPacket.connectionRouteID;
         heartbeatInterval = parsedPacket.heartbeatInterval;
 
-        connectionController.setRouteID(connection, connectionOwner);
+        connection.routeID = connectionOwner;
         routeController.addRoute(connectionRouteID, executionRouteHandler);
-        setHeartrate(connection, heartbeatInterval);
+        setHeartbeats(connection, heartbeatInterval);
     }
 }
 
@@ -92,7 +83,10 @@ function executionRouteHandler(connection, headerbits, incomingPacket) {
     }
 }
 
-function setHeartrate(connection, heartbeatInterval) {
+
+// Heartbeats
+
+function setHeartbeats(connection, heartbeatInterval) {
     heart.setHeartrate(heartbeatInterval);
     heart.createEvent(1, function() {
         if (connection.outgoingPulse.missedBeats() > 0) {

@@ -2,21 +2,17 @@ var EventEmitter = require('events').EventEmitter;
 var util = require('util');
 var heartbeats = require('heartbeats');
 
-var helper = require('./utils/helper');
-var parser = require('./lib/parser');
+var routeController = require('./lib/controllers/routeController');
+var connectionController = require('./lib/controllers/connectionController');
+var executionController = require('./lib/controllers/executionController');
 
-var routeController = require('./lib/routeController'),
-    connectionController = require('./lib/connectionController'),
-    executionController = require('./lib/executionController'),
-    middlewareLoader = require('./lib/middlewareLoader');
+var helper = require('./lib/utils/helper');
+var parser = require('./lib/utils/parser');
+var middleware = require('./lib/utils/middleware');
 
-var Connection = require('./lib/connection'),
-    NameSpace = require('./lib/namespace'),
-    IncomingCallBack = require('./lib/callback');
-
-var coreID = helper.createPseudoUuid(8),
-    heart,
-    heartbeatInterval;
+var coreID = helper.createPseudoUuid(8);
+var heart;
+var heartbeatInterval;
 
 util.inherits(Samsaara, EventEmitter);
 
@@ -25,27 +21,23 @@ function Samsaara() {
 
     EventEmitter.call(this);
 
-    routeController.initialize(parser);
-    connectionController.initialize(coreID, this);
-    executionController.initialize(this, routeController);
-    middlewareLoader.initialize(this, connectionController, executionController, routeController);
+    routeController.setParser(parser);
+    connectionController.initialize(this, coreID);
+    executionController.initialize(this);
 
-    Connection.initialize(executionController);
-    NameSpace.initialize();
-    IncomingCallBack.initialize(executionController);
+    middleware.initialize(this);
 
     this.connection = connectionController.connection;
     this.newConnection = connectionController.newConnection;
     this.nameSpace = executionController.nameSpace;
     this.createNamespace = executionController.createNamespace;
     this.expose = executionController.expose;
-    this.use = middlewareLoader.use;
+    this.use = middleware.use;
 
     this.opts = {};
 }
 
 Samsaara.prototype.initialize = function(opts) {
-
     opts = opts || {};
     this.opts = opts;
 
@@ -54,7 +46,7 @@ Samsaara.prototype.initialize = function(opts) {
     heartbeatInterval = opts.heartbeatInterval || 10000;
     heart = heartbeats.createHeart(heartbeatInterval, 'samsaara');
 
-    middlewareLoader.load();
+    middleware.load();
     initializeServer(this, opts);
 
     return this;
@@ -64,8 +56,7 @@ Samsaara.prototype.initialize = function(opts) {
 // Initialize server instance
 
 function initializeServer(samsaara, opts) {
-
-    Connection.preInitializationMethods.push(initializeConnection);
+    connectionController.addPreInitialization(initializeConnection);
     routeController.addRoute('INIT', initializationRouteHandler);
     routeController.addRoute(coreID, executionRouteHandler);
     startHeartbeatMonitor();
@@ -75,8 +66,7 @@ function initializeServer(samsaara, opts) {
 // Add a method to execute when new Connection is made.
 
 function initializeConnection(connection) {
-
-    routeController.routePacket(connection.socket, 'INIT', {
+    routeController.routeOutgoingPacket(connection.socket, 'INIT', {
         connectionOwner: connection.owner,
         connectionRouteID: connection.routeID,
         heartbeatInterval: heartbeatInterval
@@ -105,8 +95,11 @@ function executionRouteHandler(connection, headerbits, incomingPacket) {
     }
 }
 
+
+// Monitor Heartbeats for connections.
+
 function startHeartbeatMonitor() {
-    
+
     heart.createEvent(3, function() {
         var connections = connectionController.connections,
             connection,
@@ -116,7 +109,7 @@ function startHeartbeatMonitor() {
             connection = connections[connectionID];
 
             if (connection.incomingPulse.missedBeats() > 2) {
-                connection.socket.close(111, 'Flatlining Connection');
+                connection.close(111, 'Flatlining Connection');
             }
         }
     });
