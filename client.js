@@ -43,7 +43,6 @@ Samsaara.prototype.initialize = function(opts) {
     this.executeRaw = this.core.executeRaw.bind(this.core);
     this.nameSpace = this.core.nameSpace.bind(this.core);
     this.close = this.core.close.bind(this.core);
-    this.setState = this.core.setState.bind(this.core);
 
     middleware.load();
 
@@ -52,18 +51,11 @@ Samsaara.prototype.initialize = function(opts) {
     return this;
 };
 
-Object.defineProperty(Samsaara.prototype, 'state', {
-    get: function() {
-        return this.core ? this.core.state : null;
-    }
-});
-
 
 // Initialize client instance
 
 function initializeClient(samsaara, core, opts) {
     routeController.addRoute('INIT', initializationRouteHandler);
-    exposeStateHandler(samsaara);
 }
 
 
@@ -94,23 +86,6 @@ function executionRouteHandler(connection, headerbits, incomingPacket) {
         parsedPacket.sender = connection.id;
         executionController.executeFunction(connection, connection, parsedPacket);
     }
-}
-
-
-// State Change Handler
-
-function exposeStateHandler(samsaara) {
-    samsaara.nameSpace('internal').expose({
-        setState: function(state, cb) {
-            var connection = this;
-            var attributeName;
-            for (attributeName in state) {
-                connection.state[attributeName] = state[attributeName];
-            }
-            samsaara.emit('stateChange', connection.state, connection);
-            cb(true);
-        }
-    });
 }
 
 
