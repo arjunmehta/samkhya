@@ -59,6 +59,7 @@ function initializeServer(samsaara, opts) {
     connectionController.addPreInitialization(initializeConnection);
     routeController.addRoute('INIT', initializationRouteHandler);
     routeController.addRoute(coreID, executionRouteHandler);
+    exposeStateHandler(samsaara);
     startHeartbeatMonitor();
 }
 
@@ -74,7 +75,7 @@ function initializeConnection(connection) {
 }
 
 
-// Local route handlers
+// Route Handlers
 
 function initializationRouteHandler(connection, headerbits, incomingPacket) {
 
@@ -93,6 +94,22 @@ function executionRouteHandler(connection, headerbits, incomingPacket) {
         parsedPacket.sender = connection.id;
         executionController.executeFunction(connection, connection, parsedPacket);
     }
+}
+
+
+// State Change Handler
+
+function exposeStateHandler(samsaara) {
+    samsaara.nameSpace('internal').expose({
+        setState: function(state, cb) {
+            var connection = this;
+            var attributeName;
+            for (attributeName in state) {
+                connection.state[attributeName] = state[attributeName];
+            }
+            cb(true);
+        }
+    });
 }
 
 

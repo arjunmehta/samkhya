@@ -10,7 +10,6 @@ var helper = require('./lib/utils/helper');
 var parser = require('./lib/utils/parser');
 var middleware = require('./lib/utils/middleware');
 
-var coreID = helper.createPseudoUuid(8);
 var heart;
 
 util.inherits(Samsaara, EventEmitter);
@@ -21,7 +20,7 @@ function Samsaara() {
     EventEmitter.call(this);
 
     routeController.setParser(parser);
-    connectionController.initialize(this, coreID);
+    connectionController.initialize(this, null);
     executionController.initialize(this);
 
     middleware.initialize(this);
@@ -33,29 +32,42 @@ function Samsaara() {
 }
 
 Samsaara.prototype.initialize = function(opts) {
-    var socket;
     opts = opts || {};
-    socket = opts.socket;
 
-    connectionController.setTransport(opts.socketType || 'ws', false);
     heart = heartbeats.createHeart(2000, 'samsaara');
+    connectionController.setTransport(opts.socketType || 'ws', true);
+
+    this.core = connectionController.newConnection(opts.socket);
+
+    this.execute = this.core.execute.bind(this.core);
+    this.executeRaw = this.core.executeRaw.bind(this.core);
+    this.nameSpace = this.core.nameSpace.bind(this.core);
+    this.close = this.core.close.bind(this.core);
+    this.setState = this.core.setState.bind(this.core);
 
     middleware.load();
-    this.core = connectionController.newConnection(socket);
+
     initializeClient(this, this.core, opts);
 
     return this;
 };
+
+Object.defineProperty(Samsaara.prototype, 'state', {
+    get: function() {
+        return this.core ? this.core.state : null;
+    }
+});
 
 
 // Initialize client instance
 
 function initializeClient(samsaara, core, opts) {
     routeController.addRoute('INIT', initializationRouteHandler);
+    exposeStateHandler(samsaara);
 }
 
 
-// Route Methods
+// Route Handlers
 
 function initializationRouteHandler(connection, headerbits, incomingPacket) {
     var parsedPacket = parser.parsePacket(incomingPacket),
@@ -68,8 +80,9 @@ function initializationRouteHandler(connection, headerbits, incomingPacket) {
         connectionRouteID = parsedPacket.connectionRouteID;
         heartbeatInterval = parsedPacket.heartbeatInterval;
 
-        connection.routeID = connectionOwner;
+        helper.addReadOnlyBaseProperty(connection, 'routeID', connectionOwner);
         routeController.addRoute(connectionRouteID, executionRouteHandler);
+        connection.queue.emptyToRoute(connectionOwner);
         setHeartbeats(connection, heartbeatInterval);
     }
 }
@@ -81,6 +94,23 @@ function executionRouteHandler(connection, headerbits, incomingPacket) {
         parsedPacket.sender = connection.id;
         executionController.executeFunction(connection, connection, parsedPacket);
     }
+}
+
+
+// State Change Handler
+
+function exposeStateHandler(samsaara) {
+    samsaara.nameSpace('internal').expose({
+        setState: function(state, cb) {
+            var connection = this;
+            var attributeName;
+            for (attributeName in state) {
+                connection.state[attributeName] = state[attributeName];
+            }
+            samsaara.emit('stateChange', connection.state, connection);
+            cb(true);
+        }
+    });
 }
 
 
