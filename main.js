@@ -107,6 +107,7 @@ function exposeStateHandler(samsaara) {
             for (attributeName in state) {
                 connection.state[attributeName] = state[attributeName];
             }
+            connection.emit('stateChange', connection.state, state);
             cb(true);
         }
     });
