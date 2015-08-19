@@ -18,7 +18,6 @@ util.inherits(Samsaara, EventEmitter);
 
 
 function Samsaara() {
-
     EventEmitter.call(this);
 
     routeController.setParser(parser);
@@ -57,8 +56,11 @@ Samsaara.prototype.initialize = function(opts) {
 
 function initializeServer(samsaara, opts) {
     connectionController.addPreInitialization(initializeConnection);
+
     routeController.addRoute('INIT', initializationRouteHandler);
     routeController.addRoute(coreID, executionRouteHandler);
+
+    exposeStateHandler(samsaara);
     startHeartbeatMonitor();
 }
 
@@ -96,14 +98,31 @@ function executionRouteHandler(connection, headerbits, incomingPacket) {
 }
 
 
+// State Change Handler
+
+function exposeStateHandler(samsaara) {
+    samsaara.nameSpace('internal').expose({
+        setState: function(state, cb) {
+            var connection = this;
+            var attributeName;
+            for (attributeName in state) {
+                connection.state[attributeName] = state[attributeName];
+            }
+            connection.emit('stateChange', connection.state, state);
+            cb(true);
+        }
+    });
+}
+
+
 // Monitor Heartbeats for connections.
 
 function startHeartbeatMonitor() {
 
     heart.createEvent(3, function() {
-        var connections = connectionController.connections,
-            connection,
-            connectionID;
+        var connections = connectionController.connections;
+        var connection;
+        var connectionID;
 
         for (connectionID in connections) {
             connection = connections[connectionID];
