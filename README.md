@@ -20,32 +20,44 @@ npm install --save samsaara
 
 ## Basic Usage
 
-### Initialize Server
+### Client Side
+Using browserify or any other commonjs packager, just require samsaara in your client script and initialize with your socket.
+
+Use the `core` object to perform actions on the samsaara core server.
 
 ```javascript
-var ws = new WebSocket('ws://localhost/socket');
-var samsaara = require('samsaara').initialize({socket: ws});
+var WebSocket = require('ws')
+var ws = new WebSocket('ws://localhost')
 
-samsaara.expose({  
-  test: function(a_string, number_array, cb){
-    // this.executor.execute('response')('hi');
-    console.log(a_string, number_array, cb({any: 'data'}, function(){
+var samsaara = require('samsaara').initialize({
+    socket: ws
+})
 
-    }));
-  }
-});
+// Execute a method on the CORE server
+samsaara.core.execute('testMethod')('testing samsaara', [111, 222, 333])
 ```
 
-### Client Side
-If you're using browserify or something of the sort, just require samsaara in your client script and send along your socket.
+### Server Side
 
 ```javascript
-var ws = new WebSocket('ws://localhost/socket');
-var samsaara = require('samsaara').initialize({socket: ws});
+var WebSocketServer = require('ws').Server
+var wss = new WebSocketServer({
+    port: 8080
+})
 
-samsaara.execute('test')('testing samsaara', [111, 222, 333], function(result){
-  console.log(result);
-});
+var samsaara = require('samsaara').initialize({
+    socketType: 'ws'
+})
+
+wss.on('connection', function connection(ws) {
+    var connection = samsaara.newConnection(ws)
+})
+
+samsaara.expose({
+    testMethod: function(a_string, number_array) {
+        console.log('Test Method Executed', a_string, number_array);
+    }
+})
 ```
 
 ## Primitives
@@ -113,11 +125,8 @@ Namespaces are powerful because the enable so many things that might not be full
 #### samsaara.nameSpace(name).expose()
 
 
-## Client API
+## Connection API
 The client API is quite similar to the server's API. There's just less to it :)
-
-### Client: Events
-#### samsaara.on('initialized', handler)
 
 ### Client: Interacting with the Core Process
 Currently clients are only connected to a single server process at a time. Perhaps someone would like to write an extension that connects to multiple? :)
