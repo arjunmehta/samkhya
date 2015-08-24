@@ -44,7 +44,7 @@ Samsaara.prototype.initialize = function(opts) {
     // this.close = this.core.close.bind(this.core);
     // this.setState = this.core.setState.bind(this.core);
 
-    middleware.loader();
+    middleware.load();
 
     initializeClient(this, this.core, opts);
 
