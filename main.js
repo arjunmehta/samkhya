@@ -23,15 +23,14 @@ function Samsaara() {
     routeController.setParser(parser);
     connectionController.initialize(this, coreID);
     executionController.initialize(this);
-
     middleware.initialize(this);
 
-    this.connection = connectionController.connection;
-    this.newConnection = connectionController.newConnection;
-    this.nameSpace = executionController.nameSpace;
-    this.createNamespace = executionController.createNamespace;
-    this.expose = executionController.expose;
-    this.use = middleware.use;
+    this.connection = connectionController.connection.bind(connectionController);
+    this.newConnection = connectionController.newConnection.bind(connectionController);
+    this.nameSpace = executionController.nameSpace.bind(executionController);
+    this.createNamespace = executionController.createNamespace.bind(executionController);
+    this.expose = executionController.expose.bind(executionController);
+    this.use = middleware.use.bind(middleware);
 
     this.opts = {};
 }
@@ -55,7 +54,8 @@ Samsaara.prototype.initialize = function(opts) {
 // Initialize server instance
 
 function initializeServer(samsaara, opts) {
-    connectionController.addPreInitialization(initializeConnection);
+
+    connectionController.addPreinitialization(initializeConnection);
 
     routeController.addRoute('INIT', initializationRouteHandler);
     routeController.addRoute(coreID, executionRouteHandler);

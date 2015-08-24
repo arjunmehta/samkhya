@@ -22,13 +22,12 @@ function Samsaara() {
     routeController.setParser(parser);
     connectionController.initialize(this, null);
     executionController.initialize(this);
-
     middleware.initialize(this);
 
-    this.nameSpace = executionController.nameSpace;
-    this.createNamespace = executionController.createNamespace;
-    this.expose = executionController.expose;
-    this.use = middleware.use;
+    this.nameSpace = executionController.nameSpace.bind(executionController);
+    this.createNamespace = executionController.createNamespace.bind(executionController);
+    this.expose = executionController.expose.bind(executionController);
+    this.use = middleware.use.bind(middleware);
 }
 
 Samsaara.prototype.initialize = function(opts) {
@@ -39,13 +38,13 @@ Samsaara.prototype.initialize = function(opts) {
 
     this.core = connectionController.newConnection(opts.socket);
 
-    this.execute = this.core.execute.bind(this.core);
-    this.executeRaw = this.core.executeRaw.bind(this.core);
-    this.nameSpace = this.core.nameSpace.bind(this.core);
-    this.close = this.core.close.bind(this.core);
-    this.setState = this.core.setState.bind(this.core);
+    // this.execute = this.core.execute.bind(this.core);
+    // this.executeRaw = this.core.executeRaw.bind(this.core);
+    // this.nameSpace = this.core.nameSpace.bind(this.core);
+    // this.close = this.core.close.bind(this.core);
+    // this.setState = this.core.setState.bind(this.core);
 
-    middleware.load();
+    middleware.loader();
 
     initializeClient(this, this.core, opts);
 
@@ -100,6 +99,7 @@ function executionRouteHandler(connection, headerbits, incomingPacket) {
 // State Change Handler
 
 function exposeStateHandler(samsaara) {
+
     samsaara.nameSpace('internal').expose({
         setState: function(state, cb) {
             var connection = this;

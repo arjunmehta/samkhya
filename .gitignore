@@ -26,5 +26,7 @@ node_modules
 
 scratchpad.js
 browser-old.js
-
+tester.js
+runghost.js
 test/tester.js
+test/old
