@@ -1,5 +1,7 @@
 # samsaara
 
+**Note:** *This module is NOT ready to be used. If you happen to have stumbled across it, know it's a Work in Process.*
+
 [![Build Status](https://travis-ci.org/arjunmehta/node-samsaara.svg?branch=master)](https://travis-ci.org/arjunmehta/node-samsaara)
 
 ![samsaara title image](https://raw.githubusercontent.com/arjunmehta/node-samsaara/image/image/splash.png)
