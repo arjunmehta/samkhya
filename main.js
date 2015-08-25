@@ -25,15 +25,32 @@ function Samsaara() {
     executionController.initialize(this);
     middleware.initialize(this);
 
-    this.connection = connectionController.connection.bind(connectionController);
-    this.newConnection = connectionController.newConnection.bind(connectionController);
-    this.nameSpace = executionController.nameSpace.bind(executionController);
-    this.createNamespace = executionController.createNamespace.bind(executionController);
-    this.expose = executionController.expose.bind(executionController);
-    this.use = middleware.use.bind(middleware);
-
     this.opts = {};
 }
+
+Samsaara.prototype.connection = function(connectionID) {
+    connectionController.connection(connectionID);
+};
+
+Samsaara.prototype.newConnection = function(rawSocket, opts) {
+    connectionController.newConnection(rawSocket, opts);
+};
+
+Samsaara.prototype.nameSpace = function(namespaceName) {
+    executionController.nameSpace(namespaceName);
+};
+
+Samsaara.prototype.createNamespace = function(namespaceName, methods) {
+    executionController.createNamespace(namespaceName, methods);
+};
+
+Samsaara.prototype.expose = function(set) {
+    executionController.expose(set);
+};
+
+Samsaara.prototype.use = function(module) {
+    middleware.use(module);
+};
 
 Samsaara.prototype.initialize = function(opts) {
     opts = opts || {};
