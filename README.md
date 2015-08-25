@@ -35,11 +35,11 @@ var samsaara = require('samsaara').initialize({
     socket: ws
 })
 
-// Execute a method on the CORE server
+// Execute a method on core
 samsaara.core.execute('testMethod')('testing samsaara', [111, 222, 333])
 ```
 
-### Server Side
+### Core (Server) Side
 
 ```javascript
 var WebSocketServer = require('ws').Server
@@ -62,8 +62,8 @@ samsaara.expose({
 })
 ```
 
-## Primitives
-At samsaara's core, there are 3 main components to interact with: connections; namespaces; and exposed methods. Middleware modules handle the rest (groups, resources, ipc, authentication etc.) but they're all built on these fundamental components.
+## Primitive Components
+There are 3 main components to interact with when using samsaara: connections; namespaces; and exposed methods. Middleware modules handle the rest (grouping, resources, ipc, authentication etc.) but they're all based on these fundamental components.
 
 ### Connections
 A `connection` is just a representation of a connected client and is the most fundamental and important object in the system. Samsaara uses a realtime channel (either websockets, sockjs, engine.io etc.) to communicate with the connection and pass messages between client and server processes.
@@ -71,14 +71,14 @@ A `connection` is just a representation of a connected client and is the most fu
 Refer to the API to see details on interfacing with the connection and its events.
 
 ### Exposed Methods
-`exposed` methods expose server functions to clients and viceversa to allow you to seamlessly work between client and server, pass arguments between them, and program as if they were native, local* objects.
+In the same way routes are exposed interfaces to http clients, samsaara can `expose` methods to connections. This simple action allow you to seamlessly work between client and server, pass arguments between them, and program as if each were native, local* objects.
 
 Refer to the API to see details on using exposed methods to interact with connections.
 
 *(uhmmm we're trying anyway)
 
 ### Namespaces
-A `nameSpace` is a discrete space for exposed methods. Namespaces basically allow you to separate groups of exposed methods. But even more importantly they allow for almost infinite extensibility, giving modules the ability to route messages and functionality.
+A `nameSpace` is a discrete space for exposed methods. Namespaces basically allow you to separate groups of exposed methods. But even more importantly they allow for almost infinite extensibility, giving modules the ability to have custom configurations without worrying about overlapping names.
 
 Refer to the API to see details on using nameSpaces.
 
