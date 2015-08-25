@@ -23,12 +23,27 @@ function Samsaara() {
     connectionController.initialize(this, null);
     executionController.initialize(this);
     middleware.initialize(this);
-
-    this.nameSpace = executionController.nameSpace.bind(executionController);
-    this.createNamespace = executionController.createNamespace.bind(executionController);
-    this.expose = executionController.expose.bind(executionController);
-    this.use = middleware.use.bind(middleware);
 }
+
+Samsaara.prototype.nameSpace = function(namespaceName) {
+    executionController.nameSpace(namespaceName);
+};
+
+Samsaara.prototype.createNamespace = function(namespaceName, methods) {
+    executionController.createNamespace(namespaceName, methods);
+};
+
+Samsaara.prototype.expose = function(set) {
+    executionController.expose(set);
+};
+
+Samsaara.prototype.use = function(module) {
+    middleware.use(module);
+};
+
+Samsaara.prototype.setState = function(state, cb) {
+    this.core.setState(state, cb);
+};
 
 Samsaara.prototype.initialize = function(opts) {
     opts = opts || {};
@@ -36,14 +51,7 @@ Samsaara.prototype.initialize = function(opts) {
     heart = heartbeats.createHeart(2000, 'samsaara');
     connectionController.setTransport(opts.socketType || 'ws', true);
 
-    this.core = connectionController.newConnection(opts.socket);
-
-    // this.execute = this.core.execute.bind(this.core);
-    // this.executeRaw = this.core.executeRaw.bind(this.core);
-    // this.nameSpace = this.core.nameSpace.bind(this.core);
-    // this.close = this.core.close.bind(this.core);
-    // this.setState = this.core.setState.bind(this.core);
-
+    this.core = connectionController.newConnection(opts.socket, 'core');
     middleware.load();
 
     initializeClient(this, this.core, opts);
