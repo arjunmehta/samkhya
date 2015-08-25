@@ -26,23 +26,23 @@ function Samsaara() {
 }
 
 Samsaara.prototype.nameSpace = function(namespaceName) {
-    executionController.nameSpace(namespaceName);
+    return executionController.nameSpace(namespaceName);
 };
 
 Samsaara.prototype.createNamespace = function(namespaceName, methods) {
-    executionController.createNamespace(namespaceName, methods);
+    return executionController.createNamespace(namespaceName, methods);
 };
 
 Samsaara.prototype.expose = function(set) {
-    executionController.expose(set);
+    return executionController.expose(set);
 };
 
 Samsaara.prototype.use = function(module) {
-    middleware.use(module);
+    return middleware.use(module);
 };
 
 Samsaara.prototype.setState = function(state, cb) {
-    this.core.setState(state, cb);
+    return this.core.setState(state, cb);
 };
 
 Samsaara.prototype.initialize = function(opts) {

@@ -29,27 +29,27 @@ function Samsaara() {
 }
 
 Samsaara.prototype.connection = function(connectionID) {
-    connectionController.connection(connectionID);
+    return connectionController.connection(connectionID);
 };
 
 Samsaara.prototype.newConnection = function(rawSocket, opts) {
-    connectionController.newConnection(rawSocket, opts);
+    return connectionController.newConnection(rawSocket, opts);
 };
 
 Samsaara.prototype.nameSpace = function(namespaceName) {
-    executionController.nameSpace(namespaceName);
+    return executionController.nameSpace(namespaceName);
 };
 
 Samsaara.prototype.createNamespace = function(namespaceName, methods) {
-    executionController.createNamespace(namespaceName, methods);
+    return executionController.createNamespace(namespaceName, methods);
 };
 
 Samsaara.prototype.expose = function(set) {
-    executionController.expose(set);
+    return executionController.expose(set);
 };
 
 Samsaara.prototype.use = function(module) {
-    middleware.use(module);
+    return middleware.use(module);
 };
 
 Samsaara.prototype.initialize = function(opts) {
