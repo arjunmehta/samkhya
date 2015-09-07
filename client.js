@@ -118,7 +118,7 @@ function exposeStateHandler(samsaara) {
             samsaara.emit('stateChange', connection.state, connection);
             cb(true);
         },
-        initialized: function(success) {
+        initialized: function(success, cb) {
             samsaara.emit('initialized', success);
         }
     });
