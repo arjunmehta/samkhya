@@ -36,6 +36,7 @@
     "multiview": "~2.2.1",
     "phantomjs": "~1.9.18",
     "tape": "~4.2.0",
+    "websocket": "^1.0.21",
     "ws": "~0.8.0"
   },
   "scripts": {
