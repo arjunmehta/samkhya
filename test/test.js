@@ -1,6 +1,11 @@
-var test = require('tape').test;
 var samsaara = require('../main');
+var WebSocketServer = require('ws').Server;
 
+var test = require('tape').test;
+
+var wss = new WebSocketServer({
+    port: 8080
+});
 
 
 test('Samsaara Server Exists', function(t) {
@@ -30,5 +35,23 @@ test('Samsaara has execution export methods', function(t) {
 test('Samsaara can initialize', function(t) {
     var initialized = samsaara.initialize();
     t.equal(initialized, samsaara);
+    t.end();
+});
+
+test('Samsaara Initializes a Connection', function(t) {
+    var connection;
+
+    wss.on('connection', function(ws) {
+        console.log('NEW CONNECTION');
+        connection = samsaara.newConnection(ws);
+        connection.on('initialized', function(success) {
+            t.equal(success, true);
+            t.end();
+        });
+    });
+});
+
+test('Close Test', function(t) {
+    wss.close();
     t.end();
 });
