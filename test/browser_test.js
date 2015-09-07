@@ -1,10 +1,10 @@
 var test = require('tape').test;
 var shim = require('es5-shim');
 var samsaara = require('../client');
-var EventEmitter = require('events').EventEmitter;
 
-var fakeSocket = new EventEmitter();
-
+// var WebSocket = require('ws');
+var W3CWebSocket = require('websocket').w3cwebsocket;
+var ws;
 
 test('Samsaara Client Exists', function(t) {
     t.equal(typeof samsaara, 'object');
@@ -24,24 +24,46 @@ test('Samsaara has execution export methods', function(t) {
     t.end();
 });
 
-test('Samsaara can initialize', function(t) {
-    var initialized = samsaara.initialize({
-        socket: fakeSocket
+
+test('Samsaara initializes', function(t) {
+    ws = new W3CWebSocket('ws://localhost:8080');
+
+    samsaara.initialize({
+        socket: ws
     });
-    t.equal(initialized, samsaara);
+
+    samsaara.on('initialized', function(success) {
+        console.log('Samsaara is initialized');
+        t.equal(success, true);
+        t.end();
+    });
+});
+
+
+test('Quit websocket', function(t) {
+    ws.close();
     t.end();
 });
 
-test('Samsaara has core', function(t) {
-    t.equal(typeof samsaara.core, 'object');
-    t.end();
-});
 
-test('Samsaara has core', function(t) {
-    t.equal(typeof samsaara.core.execute, 'function');
-    t.equal(typeof samsaara.core.executeRaw, 'function');
-    t.equal(typeof samsaara.core.nameSpace, 'function');
-    t.equal(typeof samsaara.core.close, 'function');
-    t.equal(typeof samsaara.core.setState, 'function');
-    t.end();
-});
+// test('Samsaara can initialize', function(t) {
+//     var initialized = samsaara.initialize({
+//         socket: ws
+//     });
+//     t.equal(initialized, samsaara);
+//     t.end();
+// });
+
+// test('Samsaara has core', function(t) {
+//     t.equal(typeof samsaara.core, 'object');
+//     t.end();
+// });
+
+// test('Samsaara has core', function(t) {
+//     t.equal(typeof samsaara.core.execute, 'function');
+//     t.equal(typeof samsaara.core.executeRaw, 'function');
+//     t.equal(typeof samsaara.core.nameSpace, 'function');
+//     t.equal(typeof samsaara.core.close, 'function');
+//     t.equal(typeof samsaara.core.setState, 'function');
+//     t.end();
+// });
