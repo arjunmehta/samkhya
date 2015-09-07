@@ -39,7 +39,7 @@
     "ws": "~0.8.0"
   },
   "scripts": {
-    "test": "multiview [browserify test/browser_test.js '|' ghostface] [tape test/test.js]",
+    "test": "multiview [browserify test/browser_test.js '|' ghostface] [tape test/test.js] -x 1000",
     "test-single": "browserify test/browser_test.js | ghostface && tape test/test.js"
   },
   "license": "MIT",
