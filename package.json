@@ -36,11 +36,11 @@
     "multiview": "~2.2.1",
     "phantomjs": "~1.9.18",
     "tape": "~4.2.0",
-    "websocket": "^1.0.21",
     "ws": "~0.8.0"
   },
   "scripts": {
     "test": "multiview [browserify test/browser_test.js '|' ghostface] [tape test/test.js] -x 1000",
+    "test-multi": "multiview [browserify test/browser_test.js '|' ghostface] [tape test/test.js]",
     "test-single": "browserify test/browser_test.js | ghostface && tape test/test.js"
   },
   "license": "MIT",
