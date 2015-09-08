@@ -3,7 +3,7 @@ var shim = require('es5-shim');
 var samsaara = require('../client');
 
 // var WebSocket = require('ws');
-var W3CWebSocket = require('websocket').w3cwebsocket;
+var WebSocket = require('ws');
 var ws;
 
 test('Samsaara Client Exists', function(t) {
@@ -26,7 +26,7 @@ test('Samsaara has execution export methods', function(t) {
 
 
 test('Samsaara initializes', function(t) {
-    ws = new W3CWebSocket('ws://localhost:8080');
+    ws = new WebSocket('ws://localhost:8080');
 
     samsaara.initialize({
         socket: ws
