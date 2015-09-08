@@ -120,6 +120,9 @@ function exposeStateHandler(samsaara) {
         },
         initialized: function(success, cb) {
             samsaara.emit('initialized', success);
+            if (typeof cb === 'function') {
+                cb(true);
+            }
         }
     });
 }
