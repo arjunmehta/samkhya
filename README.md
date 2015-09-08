@@ -70,10 +70,10 @@ A `connection` is just a representation of a connected client and is the most fu
 
 Refer to the API to see details on interfacing with the connection and its events.
 
-### Exposed Methods
+### Exposures
 In the same way routes are exposed interfaces to http clients, samsaara can `expose` methods to connections. This simple action allow you to seamlessly work between client and server, pass arguments between them, and program as if each were native, local* objects.
 
-Refer to the API to see details on using exposed methods to interact with connections.
+Refer to the API to see details on using exposed methods (exposures) to interact with connections.
 
 *(uhmmm we're trying anyway)
 
