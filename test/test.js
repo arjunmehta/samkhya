@@ -42,7 +42,6 @@ test('Samsaara initializes a connection', function(t) {
     var connection;
 
     wss.on('connection', function(ws) {
-        console.log('NEW CONNECTION');
         connection = samsaara.newConnection(ws);
         connection.on('initialized', function(success) {
             t.equal(success, true);
