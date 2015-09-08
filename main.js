@@ -79,6 +79,7 @@ function initializeServer(samsaara, opts) {
 
     exposeStateHandler(samsaara);
     startHeartbeatMonitor();
+    addInitializationDoneClosure(samsaara);
 }
 
 
@@ -127,9 +128,6 @@ function exposeStateHandler(samsaara) {
             }
             connection.emit('stateChange', connection.state, state);
             cb(true);
-        },
-        initialized: function(success) {
-            this.emit('initialized', success);
         }
     });
 }
@@ -154,5 +152,18 @@ function startHeartbeatMonitor() {
     });
 }
 
+
+// Handle Initialization
+
+function addInitializationDoneClosure(samsaara) {
+    connectionController.initializationDoneClosure = function(connection) {
+        return function() {
+            connection.execute('initialized', 'internal')(true, function(confirmation) {
+                connection.emit('initialized', confirmation);
+                samsaara.emit('initialized', connection, confirmation);
+            });
+        };
+    };
+}
 
 module.exports = new Samsaara();
