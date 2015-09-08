@@ -30,8 +30,6 @@
   "devDependencies": {
     "browserify": "~10.2.4",
     "es5-shim": "~4.1.10",
-    "express": "~4.0.0",
-    "faucet": "0.0.1",
     "ghostface": "~1.4.0",
     "multiview": "~2.2.1",
     "phantomjs": "~1.9.18",
