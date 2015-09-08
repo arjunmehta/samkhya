@@ -38,7 +38,7 @@ test('Samsaara can initialize', function(t) {
     t.end();
 });
 
-test('Samsaara Initializes a Connection', function(t) {
+test('Samsaara initializes a connection', function(t) {
     var connection;
 
     wss.on('connection', function(ws) {
