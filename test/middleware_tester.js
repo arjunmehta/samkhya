@@ -14,7 +14,7 @@ module.exports = {
 
 
     initialize: function(samsaaraExtender, capability, options) {
-        samsaara = samsaaraExtender.samsaara_core;
+        samsaara = samsaaraExtender.core;
 
         samsaaraExtender.setCoreMethods(this.coreMethods);
         samsaaraExtender.setModuleMethods(this.moduleMethods);
@@ -27,7 +27,6 @@ module.exports = {
         samsaaraExtender.setPreRouteFilter(this.preRouteFilter);
         samsaaraExtender.setMessageRoutes(this.messageRoutes);
         samsaaraExtender.setPreRouteFilter(this.preRouteFilter);
-        this.finalize(samsaaraExtender);
 
         return this;
     },
