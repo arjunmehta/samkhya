@@ -1,7 +1,7 @@
 {
   "name": "samsaara",
   "browser": "client.js",
-  "version": "1.0.0",
+  "version": "1.0.0-beta.1",
   "description": "A comprehensive module to create, maintain and manage active socket connections.",
   "keywords": [
     "sockjs",
