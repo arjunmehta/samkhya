@@ -77,10 +77,11 @@ function initializeClient(samsaara, core, opts) {
 // Route Handlers
 
 function initializationRouteHandler(connection, headerbits, incomingPacket) {
-    var parsedPacket = parser.parsePacket(incomingPacket),
-        connectionOwner,
-        connectionRouteID,
-        heartbeatInterval;
+
+    var parsedPacket = parser.parsePacket(incomingPacket);
+    var connectionOwner;
+    var connectionRouteID;
+    var heartbeatInterval;
 
     if (typeof parsedPacket === 'object') {
         connectionOwner = parsedPacket.connectionOwner;
@@ -110,8 +111,10 @@ function exposeStateHandler(samsaara) {
 
     samsaara.nameSpace('internal').expose({
         setState: function(state, cb) {
+
             var connection = this;
             var attributeName;
+
             for (attributeName in state) {
                 connection.state[attributeName] = state[attributeName];
             }
