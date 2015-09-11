@@ -7,6 +7,8 @@ var wss = new WebSocketServer({
     port: 8080
 });
 
+var connection;
+
 
 test('Samsaara Server Exists', function(t) {
     t.equal(typeof samsaara, 'object');
@@ -39,8 +41,6 @@ test('Samsaara can initialize', function(t) {
 });
 
 test('Samsaara initializes a connection', function(t) {
-    var connection;
-
     wss.on('connection', function(ws) {
         connection = samsaara.newConnection(ws);
         connection.on('initialized', function(success) {
@@ -49,6 +49,31 @@ test('Samsaara initializes a connection', function(t) {
         });
     });
 });
+
+test('Samsaara executes an exposed client method and receives a callback', function(t) {
+    connection.execute('testMethod')('testing123', function(successBool, successString, successArray, successObject) {
+        t.equal(successBool, true);
+        t.equal(successString, 'success');
+        t.equal(Array.isArray(successArray), true);
+        t.equal(successArray[0], true);
+        t.equal(successArray[1], 'success');
+        t.equal(Array.isArray(successArray[2]), true);
+        t.equal(typeof successArray[2][0], 'object');
+        t.equal(successArray[2][0].success, true);
+        t.equal(typeof successObject, 'object');
+        t.equal(successObject.successFactor, 400);
+        t.end();
+    });
+});
+
+test('Samsaara double call back', function(t) {
+    connection.execute('doubleCallback')(function(cb) {
+        cb(function() {
+            t.end();
+        });
+    });
+});
+
 
 test('Close Test', function(t) {
     wss.close();
