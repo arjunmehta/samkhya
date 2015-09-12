@@ -16,17 +16,17 @@ module.exports = {
     initialize: function(samsaaraExtender, capability, options) {
         samsaara = samsaaraExtender.core;
 
-        samsaaraExtender.setCoreMethods(this.coreMethods);
-        samsaaraExtender.setModuleMethods(this.moduleMethods);
-        samsaaraExtender.setExposedMethods(this.exposedMethods);
-        samsaaraExtender.setConnectionPreInitialization(this.connectionPreInitialization);
-        samsaaraExtender.setConnectionInitialization(this.connectionInitialization, {
+        samsaaraExtender.addCoreMethods(this.coreMethods);
+        samsaaraExtender.addModuleMethods(this.moduleMethods);
+        samsaaraExtender.addExposedMethods(this.exposedMethods);
+        samsaaraExtender.addConnectionPreInitialization(this.connectionPreInitialization);
+        samsaaraExtender.addConnectionInitialization(this.connectionInitialization, {
             forced: true
         });
-        samsaaraExtender.setConnectionClose(this.connectionClose);
-        samsaaraExtender.setPreRouteFilter(this.preRouteFilter);
-        samsaaraExtender.setMessageRoutes(this.messageRoutes);
-        samsaaraExtender.setPreRouteFilter(this.preRouteFilter);
+        samsaaraExtender.addConnectionClose(this.connectionClose);
+        samsaaraExtender.addPreRouteFilter(this.preRouteFilter);
+        samsaaraExtender.addMessageRoutes(this.messageRoutes);
+        samsaaraExtender.addPreRouteFilter(this.preRouteFilter);
 
         return this;
     },
