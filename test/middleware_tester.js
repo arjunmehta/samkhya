@@ -74,7 +74,9 @@ module.exports = {
 
 
     // Adds methods to execute to initialize a connection.
-    connectionInitialization: function(connectionOptions, connection, done) {},
+    connectionInitialization: function(connectionOptions, connection, done) {
+        done();
+    },
 
 
     // Adds methods to execute when a connection is closed.
