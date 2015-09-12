@@ -1,7 +1,7 @@
 {
   "name": "samsaara",
   "browser": "client.js",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-beta.2",
   "description": "A comprehensive module to create, maintain and manage active socket connections.",
   "keywords": [
     "sockjs",
@@ -23,7 +23,6 @@
     "url": "https://github.com/arjunmehta/node-samsaara.git"
   },
   "dependencies": {
-    "debug": "~2.2.0",
     "heartbeats": "~3.1.3",
     "uuid": "~2.0.1"
   },
@@ -31,7 +30,7 @@
     "browserify": "~10.2.4",
     "es5-shim": "~4.1.10",
     "ghostface": "~1.4.0",
-    "multiview": "~2.2.1",
+    "multiview": "~2.2.2",
     "phantomjs": "~1.9.18",
     "tape": "~4.2.0",
     "ws": "~0.8.0"
@@ -39,7 +38,8 @@
   "scripts": {
     "test": "multiview [browserify test/browser_test.js '|' ghostface] [tape test/test.js] -x 1000",
     "test-multi": "multiview [browserify test/browser_test.js '|' ghostface] [tape test/test.js]",
-    "test-single": "browserify test/browser_test.js | ghostface && tape test/test.js"
+    "test-single": "browserify test/browser_test.js | ghostface && tape test/test.js",
+    "test-server": "tape test/test.js"
   },
   "license": "MIT",
   "main": "main",
