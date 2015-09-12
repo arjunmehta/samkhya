@@ -79,3 +79,7 @@ test('Close Test', function(t) {
     wss.close();
     t.end();
 });
+
+process.on('exit', function() {
+    wss.close();
+});
