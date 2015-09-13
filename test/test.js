@@ -1,6 +1,7 @@
 var samsaara = require('../main');
-var WebSocketServer = require('ws').Server;
+var samsaaraMiddlewareTester = require('./middleware_tester');
 
+var WebSocketServer = require('ws').Server;
 var test = require('tape').test;
 
 var wss = new WebSocketServer({
@@ -31,6 +32,11 @@ test('Samsaara has execution export methods', function(t) {
     t.equal(typeof samsaara.nameSpace, 'function');
     t.equal(typeof samsaara.createNamespace, 'function');
     t.equal(typeof samsaara.expose, 'function');
+    t.end();
+});
+
+test('Samsaara can load middleware', function(t) {
+    samsaara.use(samsaaraMiddlewareTester);
     t.end();
 });
 
