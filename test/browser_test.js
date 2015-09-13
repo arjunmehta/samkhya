@@ -1,3 +1,5 @@
+var debugit = require('debugit').enable();
+
 var samsaara = require('../client');
 var samsaaraMiddlewareTester = require('./middleware_tester');
 

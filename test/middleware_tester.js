@@ -6,6 +6,7 @@
 
 
 var samsaara;
+var debug = require('debugit').add('samsaara:middlewareTester');
 
 
 module.exports = {
@@ -71,13 +72,13 @@ module.exports = {
 
     // Adds methods to execute when a new connection is made but not initialized yet.
     connectionPreInitialization: function(connection) {
-        console.log('\u001b[33mConnection Pre Initialization\u001b[0m', connection.id);
+        debug('\u001b[33mConnection Pre Initialization\u001b[0m', connection.id);
     },
 
 
     // Adds methods to execute to initialize a connection.
     connectionInitialization: function(connection, done) {
-        console.log('\u001b[32mConnection Initialization\u001b[0m', connection.id);
+        debug('\u001b[32mConnection Initialization\u001b[0m', connection.id);
         done();
     },
 
@@ -91,7 +92,7 @@ module.exports = {
     // Adds methods to execute when a new message comes in before it is routed to a method or process (ipc).
     // filter and modify the contents of a message to pass down before the message is routed.
     preRouteFilter: function(connection, headerbits, message, next) {
-        console.log('\u001b[31mPreRoute Filter\u001b[0m', connection.id, headerbits);
+        debug('\u001b[31mPreRoute Filter\u001b[0m', connection.id, headerbits);
         next();
     },
 
