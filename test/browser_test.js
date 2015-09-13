@@ -27,9 +27,7 @@ test('Samsaara has execution export methods', function(t) {
 });
 
 test('Samsaara can load middleware', function(t) {
-
     samsaara.use(samsaaraMiddlewareTester);
-
     t.end();
 });
 
