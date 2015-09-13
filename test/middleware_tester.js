@@ -12,21 +12,20 @@ module.exports = {
 
     name: 'middleware_unique_name',
 
+    initialize: function(extender, capability, options) {
+        samsaara = extender.core;
 
-    initialize: function(samsaaraExtender, capability, options) {
-        samsaara = samsaaraExtender.core;
-
-        samsaaraExtender.addCoreMethods(this.coreMethods);
-        samsaaraExtender.addModuleMethods(this.moduleMethods);
-        samsaaraExtender.addExposedMethods(this.exposedMethods);
-        samsaaraExtender.addConnectionPreInitialization(this.connectionPreInitialization);
-        samsaaraExtender.addConnectionInitialization(this.connectionInitialization, {
+        extender.addCoreMethods(this.coreMethods);
+        extender.addModuleMethods(this.moduleMethods);
+        extender.addExposedMethods(this.exposedMethods);
+        extender.addConnectionPreInitialization(this.connectionPreInitialization);
+        extender.addConnectionInitialization(this.connectionInitialization, {
             forced: true
         });
-        samsaaraExtender.addConnectionClose(this.connectionClose);
-        samsaaraExtender.addPreRouteFilter(this.preRouteFilter);
-        samsaaraExtender.addMessageRoutes(this.messageRoutes);
-        samsaaraExtender.addPreRouteFilter(this.preRouteFilter);
+        extender.addConnectionClose(this.connectionClose);
+        extender.addPreRouteFilter(this.preRouteFilter);
+        extender.addMessageRoutes(this.messageRoutes);
+        extender.addPreRouteFilter(this.preRouteFilter);
 
         return this;
     },
@@ -36,9 +35,11 @@ module.exports = {
     // ie. samsaara.executeOnAll('someMethod')('all');
 
     coreMethods: {
+
         middlewareTestMethod: function(a) {
             return a * 2;
         },
+
         middlewareExecuteAll: function() {
             var connection;
             var connectionName;
@@ -48,6 +49,7 @@ module.exports = {
             }
         }
     },
+
 
     // Adds new methods in the middleware to the module's own namespace.
     // ie. samsaara.groups.group();
@@ -69,23 +71,27 @@ module.exports = {
 
     // Adds methods to execute when a new connection is made but not initialized yet.
     connectionPreInitialization: function(connection) {
-
+        console.log('\u001b[33mConnection Pre Initialization\u001b[0m', connection.id);
     },
 
 
     // Adds methods to execute to initialize a connection.
-    connectionInitialization: function(connectionOptions, connection, done) {
+    connectionInitialization: function(connection, done) {
+        console.log('\u001b[32mConnection Initialization\u001b[0m', connection.id);
         done();
     },
 
 
     // Adds methods to execute when a connection is closed.
-    connectionClose: function(connection) {},
+    connectionClose: function(connection) {
+
+    },
 
 
     // Adds methods to execute when a new message comes in before it is routed to a method or process (ipc).
     // filter and modify the contents of a message to pass down before the message is routed.
     preRouteFilter: function(connection, headerbits, message, next) {
+        console.log('\u001b[31mPreRoute Filter\u001b[0m', connection.id, headerbits);
         next();
     },
 
