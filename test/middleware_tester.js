@@ -16,7 +16,7 @@ module.exports = {
     initialize: function(extender, capability, options) {
         samsaara = extender.core;
 
-        extender.addCoreMethods(this.coreMethods);
+        extender.addCoreObjects(this.coreObjects);
         extender.addModuleMethods(this.moduleMethods);
         extender.addExposedMethods(this.exposedMethods);
         extender.addConnectionPreInitialization(this.connectionPreInitialization);
@@ -35,7 +35,7 @@ module.exports = {
     // Is this something that should exist?
     // ie. samsaara.executeOnAll('someMethod')('all');
 
-    coreMethods: {
+    coreObjects: {
 
         middlewareTestMethod: function(a) {
             return a * 2;
