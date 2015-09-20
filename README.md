@@ -152,4 +152,4 @@ Namespaces are powerful because they enable so many things that might not be ful
 ## License
 The MIT License (MIT)
 
-Copyright (c) 2014 Arjun Mehta
+Copyright (c) 2015 Arjun Mehta
