@@ -71,11 +71,11 @@ A `connection` is just a representation of a connected client and is the most fu
 Refer to the API to see details on interfacing with the connection and its events.
 
 ### Exposures
-In the same way routes are exposed interfaces to http clients, samsaara can `expose` methods to connections. This simple action allow you to seamlessly work between client and server, pass arguments between them, and program as if each were native, local* objects.
+In the same way routes are exposed interfaces to http clients, samsaara can `expose` methods to connections. This simple action allow you to seamlessly work between client and server, pass arguments between them, and program as if each were native, local* objects. Data types include all the basic javascript types: Strings, Objects, Arrays, Numbers and even Function Callbacks (as a final argument) and any combination thereof.
 
 Refer to the API to see details on using exposed methods (exposures) to interact with connections.
 
-*(uhmmm we're trying anyway)
+*(uhmmm we're trying anyway.)
 
 ### Namespaces
 A `nameSpace` is a discrete space for exposed methods. Namespaces basically allow you to separate groups of exposed methods. But even more importantly they allow for almost infinite extensibility, giving modules the ability to have custom configurations without worrying about overlapping names.
