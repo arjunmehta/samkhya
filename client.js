@@ -37,8 +37,8 @@ Samsaara.prototype.expose = function(set) {
     return executionController.expose(set);
 };
 
-Samsaara.prototype.use = function(module) {
-    return middleware.use(module);
+Samsaara.prototype.use = function(module, options) {
+    return middleware.use(module, options);
 };
 
 Samsaara.prototype.setState = function(state, cb) {
