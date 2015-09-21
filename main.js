@@ -146,7 +146,7 @@ function startHeartbeatMonitor() {
             connection = connections[connectionID];
 
             if (connection !== undefined && connection.incomingPulse.missedBeats > 2) {
-                connection.close(111, 'Flatlining Connection');
+                connection.close(1011, 'Flatlining Connection');
             }
         }
     });
