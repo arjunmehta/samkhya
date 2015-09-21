@@ -136,7 +136,7 @@ function exposeStateHandler(samsaara) {
 function setHeartbeats(connection, heartbeatInterval) {
     heart.setHeartrate(heartbeatInterval);
     heart.createEvent(1, function() {
-        if (connection.outgoingPulse.missedBeats() > 0) {
+        if (connection.outgoingPulse.missedBeats > 0) {
             connection.socket.send('H');
         }
     });
