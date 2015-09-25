@@ -19,6 +19,7 @@ module.exports = {
         extender.addCoreObjects(this.coreObjects);
         extender.addModuleMethods(this.moduleMethods);
         extender.addExposedMethods(this.exposedMethods);
+        extender.addConnectionMethods(this.connectionMethods);
         extender.addConnectionPreInitialization(this.connectionPreInitialization);
         extender.addConnectionInitialization(this.connectionInitialization, {
             forced: true
@@ -66,6 +67,15 @@ module.exports = {
     exposedMethods: {
         middlewareRemoteMethod: function(a, cb) {
             if (cb) cb(a * 5);
+        }
+    },
+
+
+    // Adds methods to the Connection prototype.
+    // ie. samsaara.connection('connectionName').getMyInfo()
+    connectionMethods: {
+        getMyInfo: function(a, cb) {
+            if (cb) cb('yes');
         }
     },
 
