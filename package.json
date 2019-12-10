@@ -35,7 +35,7 @@
     "multiview": "~2.2.5",
     "phantomjs": "~1.9.18",
     "tape": "~4.2.0",
-    "ws": "~0.8.0"
+    "ws": "~7.2.0"
   },
   "scripts": {
     "test": "multiview [browserify test/browser_test.js '|' ghostface] [tape test/test.js] -x 1000",
